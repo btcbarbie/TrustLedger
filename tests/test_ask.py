@@ -7,6 +7,7 @@ from app import config, llm
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "DB_PATH", tmp_path / "t.db")
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
     monkeypatch.setattr(config, "UPLOAD_DIR", tmp_path / "uploads")
     monkeypatch.setattr(config, "SEED_PROOF_DIR", tmp_path / "seed_proofs")
     from scripts import seed
@@ -72,6 +73,16 @@ def test_ai_cannot_change_anything_and_unknown_is_safe(client, monkeypatch):
     assert all(e["status"] != "verified" or e["decided_by"] for e in before)
 
 
+def test_period_summary(client, monkeypatch):
+    as_(client, "Ngozi Eze")
+    ai_says(monkeypatch, intent="period_summary", month="2026-09")
+    r = ask(client, "give me a summary of september payments").json()
+    assert r["answer"].startswith("September 2026:") and "payments in" in r["answer"] and r["sources"]
+    ai_says(monkeypatch, intent="unknown")                     # AI unsure, but the month is obvious
+    assert ask(client, "september please").json()["answer"].startswith("September 2026:")
+    assert ask(client, "give me a summary of septmeber payments").json()["answer"].startswith("September 2026:")  # typo
+
+
 def test_keyword_fallback_when_ai_is_down(client, monkeypatch):
     def down(*a, **k):
         raise llm.LLMError("offline")
@@ -79,3 +90,4 @@ def test_keyword_fallback_when_ai_is_down(client, monkeypatch):
     as_(client, "Ngozi Eze")
     r = ask(client, "What is waiting for review?").json()
     assert r["read_by"].startswith("Keyword") and "waiting" in r["answer"]
+    assert ask(client, "summary of september").json()["answer"].startswith("September 2026:")

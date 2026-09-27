@@ -10,6 +10,7 @@ from app import config, db, proof
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "DB_PATH", tmp_path / "t.db")
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
     monkeypatch.setattr(config, "UPLOAD_DIR", tmp_path / "uploads")
     monkeypatch.setattr(config, "SEED_PROOF_DIR", tmp_path / "seed_proofs")
     from scripts import seed
@@ -99,16 +100,23 @@ def test_payout_flow_request_approve_receipt_confirm(client, monkeypatch):
     monkeypatch.setattr(proof, "read_receipt", fake_read("₦110,000.00", sender="IRETI", recipient="GRACE HOSPITAL YABA"))
     as_(client, "Amina Bello")
     assert request_payout(client).status_code == 403                      # members cannot request payouts
+    as_(client, "Halima Yusuf")
+    assert request_payout(client).status_code == 403                      # the president approves, never requests
     as_(client, "Ngozi Eze")
     pid = request_payout(client).json()["id"]
     medical = next(o for o in client.get("/api/groups/1").json()["obligations"] if "Medical" in o["title"])
     assert medical["summary"]["spent_kobo"] == 0                          # nothing counted on request
-    assert client.post(f"/api/groups/1/payouts/{pid}/approve", json={"decision": "approve"}).status_code == 403  # own request
+    assert client.post(f"/api/groups/1/payouts/{pid}/approve", json={"decision": "approve"}).status_code == 403  # treasurer cannot approve
+    as_(client, "Amina Bello")
+    assert client.post(f"/api/groups/1/payouts/{pid}/approve", json={"decision": "approve"}).status_code == 403  # nor can a member
+    as_(client, "Ngozi Eze")
     rc = client.post(f"/api/groups/1/payouts/{pid}/receipt", data={"occurred_on": today()},
                      files={"proof_file": ("r.png", png(), "image/png")})
     assert rc.status_code == 403                                          # no receipt before approval
     as_(client, "Halima Yusuf")
     assert client.post(f"/api/groups/1/payouts/{pid}/approve", json={"decision": "approve"}).json()["status"] == "approved"
+    assert client.post(f"/api/groups/1/payouts/{pid}/receipt", data={"occurred_on": today()},
+                       files={"proof_file": ("r.png", png(), "image/png")}).status_code == 403  # only the treasurer pays
     as_(client, "Ngozi Eze")
     r = client.post(f"/api/groups/1/payouts/{pid}/receipt", data={"occurred_on": today()},
                     files={"proof_file": ("r.png", png(), "image/png")}).json()

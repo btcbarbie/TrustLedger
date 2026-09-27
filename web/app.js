@@ -210,10 +210,10 @@ async function refresh() {
   const o = state.overview;
   $("#groupTitle").textContent = o.group.name;
   $("#groupMeta").textContent = `${o.members.length} members - you are viewing as ${state.me.user.name}, ${ROLE[o.my_role].toLowerCase()}`;
-  const leader = ["president", "treasurer"].includes(o.my_role);
-  $("#btnOut").classList.toggle("hidden", !leader);
-  $("#btnAddOb").classList.toggle("hidden", !leader);
-  $("#btnOut2").classList.toggle("hidden", !leader);
+  // Treasurer handles the money; president approves spending and sets up contributions.
+  $("#btnOut").classList.toggle("hidden", o.my_role !== "treasurer");
+  $("#btnOut2").classList.toggle("hidden", o.my_role !== "treasurer");
+  $("#btnAddOb").classList.toggle("hidden", o.my_role !== "president");
   renderFlow(); renderOverview(); renderAttention(); renderLedger(); renderMembers();
   if (state.tab === "activity") renderActivity();
 }
@@ -1144,13 +1144,31 @@ $("#formAddOb").addEventListener("submit", async (ev) => {
 
 async function openInvite() {
   const { code } = await api(`/api/groups/${state.groupId}/invite`);
-  $("#inviteLink").textContent = `${location.origin}/?join=${code}`;
+  const link = `${location.origin}/?join=${code}`;
+  $("#inviteLink").textContent = link;
+  $("#btnWa").href = `https://wa.me/?text=${encodeURIComponent(`Join ${state.overview.group.name} on TrustLedger: ${link}`)}`;
   $("#btnCopy").textContent = "Copy link";
   $("#dlgInvite").showModal();
 }
+async function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    try { await navigator.clipboard.writeText(text); return true; } catch { /* fall through */ }
+  }
+  // Plain http (e.g. a Wi-Fi address) blocks the clipboard API; this older method still works there.
+  const ta = document.createElement("textarea");
+  ta.value = text; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+  (document.querySelector("dialog[open]") || document.body).appendChild(ta);
+  ta.select(); ta.setSelectionRange(0, text.length);
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch { ok = false; }
+  ta.remove();
+  return ok;
+}
 $("#btnCopy").addEventListener("click", async () => {
-  try { await navigator.clipboard.writeText($("#inviteLink").textContent); $("#btnCopy").textContent = "Copied"; }
-  catch { getSelection().selectAllChildren($("#inviteLink")); $("#btnCopy").textContent = "Press Ctrl+C"; }
+  const ok = await copyText($("#inviteLink").textContent);
+  if (ok) $("#btnCopy").textContent = "Copied";
+  else { getSelection().selectAllChildren($("#inviteLink")); $("#btnCopy").textContent = /Mac|iPhone|iPad/.test(navigator.platform) ? "Press Cmd+C" : "Press Ctrl+C"; }
+  setTimeout(() => ($("#btnCopy").textContent = "Copy link"), 2500);
 });
 
 let joinCode = null;

@@ -9,6 +9,7 @@ from app import config, llm
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "DB_PATH", tmp_path / "t.db")
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
     monkeypatch.setattr(config, "UPLOAD_DIR", tmp_path / "uploads")
     monkeypatch.setattr(config, "SEED_PROOF_DIR", tmp_path / "seed_proofs")
     def no_ai(*a, **k):
@@ -73,7 +74,9 @@ def test_add_contribution_to_demo_group(client):
     goal = {"kind": "goal", "goal": {"title": "Generator repair", "amount": "3000", "due_date": "2026-10-30"}}
     assert client.post("/api/groups/1/obligations", json=goal).status_code == 403   # members cannot
     client.post("/api/view-as", json={"user_id": people["Ngozi Eze"]})
-    assert client.post("/api/groups/1/obligations", json=goal).status_code == 200
+    assert client.post("/api/groups/1/obligations", json=goal).status_code == 403   # treasurer cannot either
+    client.post("/api/view-as", json={"user_id": people["Halima Yusuf"]})
+    assert client.post("/api/groups/1/obligations", json=goal).status_code == 200   # the president sets them up
     rec = {"kind": "recurring", "series_name": "Monthly dues",
            "contribution": {"amount": "10k", "frequency": "monthly", "first_due": "2026-10-31", "periods": 6}}
     assert len(client.post("/api/groups/1/obligations", json=rec).json()["created"]) == 6

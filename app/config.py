@@ -40,7 +40,11 @@ if len(SESSION_SECRET) < 32:
     log.warning("SESSION_SECRET missing or short - using a random per-process secret")
     SESSION_SECRET = secrets.token_urlsafe(48)
 
+# DATA_DIR holds everything that must survive a redeploy (point it at a persistent disk in production).
+DATA_DIR = Path(os.getenv("DATA_DIR", str(ROOT / "data")))
 DB_PATH = Path(os.getenv("DB_PATH", str(ROOT / "trustledger.db")))
-UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", str(ROOT / "data" / "uploads")))
-SEED_PROOF_DIR = ROOT / "data" / "seed_proofs"
+UPLOAD_DIR = DATA_DIR / "uploads"
+SEED_PROOF_DIR = DATA_DIR / "seed_proofs"
+# Set SECURE_COOKIES=1 when served over HTTPS (e.g. on Railway).
+SECURE_COOKIES = os.getenv("SECURE_COOKIES", "0") == "1"
 MAX_PROOF_BYTES = 5 * 1024 * 1024

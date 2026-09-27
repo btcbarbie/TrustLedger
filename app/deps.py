@@ -31,3 +31,8 @@ def require_approver(conn, group_id: int, user_id: int) -> str:
     if role not in APPROVER_ROLES:
         raise HTTPException(403, "Only the president or treasurer can do this.")
     return role
+
+
+def require_role(conn, group_id: int, user_id: int, role: str, message: str) -> None:
+    if membership(conn, group_id, user_id)["role"] != role:
+        raise HTTPException(403, message)

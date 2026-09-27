@@ -20,7 +20,7 @@ from .money import format_naira, parse_naira
 app = FastAPI(title="TrustLedger")
 app.include_router(groups_router)
 app.add_middleware(SessionMiddleware, secret_key=config.SESSION_SECRET, same_site="lax",
-                   https_only=False, max_age=60 * 60 * 12)
+                   https_only=config.SECURE_COOKIES, max_age=60 * 60 * 12)
 
 @app.middleware("http")
 async def no_stale_frontend(request: Request, call_next):
@@ -272,8 +272,8 @@ def request_payout(group_id: int, body: PayoutRequest, user=Depends(viewer)):
         raise HTTPException(422, "Enter who will be paid.")
     amount_kobo = _parse_amount(body.amount)
     with db.tx() as conn:
-        if membership(conn, group_id, user["id"])["role"] not in rules.APPROVER_ROLES:
-            raise HTTPException(403, "Only the president or treasurer can request a payout.")
+        if membership(conn, group_id, user["id"])["role"] != "treasurer":
+            raise HTTPException(403, "Only the treasurer can request a payout. The president approves it.")
         ob = conn.execute("SELECT * FROM obligations WHERE id=? AND group_id=?", (body.obligation_id, group_id)).fetchone()
         if not ob:
             raise HTTPException(422, "Choose an obligation from this group.")
@@ -402,7 +402,7 @@ def get_proof(group_id: int, entry_id: int, user=Depends(viewer)):
         row = conn.execute("SELECT proof_path FROM entries WHERE id=? AND group_id=?", (entry_id, group_id)).fetchone()
     if not row or not row["proof_path"]:
         raise HTTPException(404, "No proof for this entry.")
-    base = config.ROOT / "data"
+    base = config.DATA_DIR
     path = (base / row["proof_path"]).resolve()
     if base.resolve() not in path.parents or not path.is_file():
         raise HTTPException(404, "No proof for this entry.")
@@ -456,7 +456,7 @@ def ask_ledger(group_id: int, body: Question, user=Depends(viewer)):
         members = {r["id"]: r["name"] for r in conn.execute(
             "SELECT u.id, u.name FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.group_id=?", (group_id,))}
         obligations, entries = _obligations(conn, group_id), _entries(conn, group_id)
-    query, reader = ask.interpret(q)
+    query, reader = ask.interpret(q, date.today())
     result = ask.run(query, asker=user, members=members, obligations=obligations, entries=entries, today=date.today())
     return {**result, "understood_as": query.model_dump(), "read_by": reader}
 

@@ -36,7 +36,7 @@ button::-moz-focus-inner{border:0}
 .va-text small{font-size:12px;color:var(--muted)}
 .va-chev{color:var(--indigo);transition:transform .3s var(--ease)}
 .va-btn[aria-expanded="true"] .va-chev{transform:rotate(180deg)}
-.va-menu{position:absolute;right:0;top:calc(100% + 10px);z-index:20;width:320px;max-width:92vw;max-height:min(440px,68vh);overflow-y:auto;overscroll-behavior:contain;margin:0;padding:8px 8px 0;list-style:none;background:#fff;color:var(--night);
+.va-menu{position:absolute;right:0;top:calc(100% + 10px);z-index:100;width:320px;max-width:92vw;max-height:min(440px,68vh);overflow-y:auto;overscroll-behavior:contain;margin:0;padding:8px 8px 0;list-style:none;background:#fff;color:var(--night);
   border-radius:16px;box-shadow:0 24px 60px rgba(16,23,61,.35);transform-origin:top right;animation:menu .28s var(--ease)}
 .va-menu::before{content:"";position:absolute;right:28px;top:-6px;width:12px;height:12px;background:#fff;transform:rotate(45deg);border-radius:2px}
 @keyframes menu{from{opacity:0;transform:translateY(-6px) scale(.96)}}
@@ -462,6 +462,9 @@ dialog.wide{width:min(600px,94vw)}
 .addrow{display:flex;gap:8px}.addrow input{flex:1}
 .linkbox{display:flex;gap:8px;align-items:center;background:var(--grey-bg);border-radius:12px;padding:8px 8px 8px 12px}
 .linkbox code{flex:1;font:500 13px var(--mono);word-break:break-all;color:var(--indigo)}
+.share-row{display:flex;gap:8px;flex-wrap:wrap}
+.wa{display:inline-flex;align-items:center;gap:8px;text-decoration:none;background:#1FAF55;color:#fff;border-radius:12px;padding:10px 16px;font:700 14px var(--body)}
+.wa:hover{background:#17964A}
 .drop[data-kind="chat"] .drop-full img{display:none}
 .drop[data-kind="chat"] .drop-full::before{content:"";flex:none;width:44px;height:44px;border-radius:12px;background:var(--leaf-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24'%3E%3Cpath d='M4 5h16v11H8l-4 4z' fill='none' stroke='%231F8A5B' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center}
 

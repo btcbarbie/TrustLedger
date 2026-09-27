@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 
 from . import db, schedule, whatsapp
-from .deps import membership, require_approver, viewer
+from .deps import membership, require_approver, require_role, viewer
 from .money import format_naira, parse_naira
 
 router = APIRouter(prefix="/api")
@@ -150,7 +150,8 @@ class ObligationIn(BaseModel):
 @router.post("/groups/{group_id}/obligations")
 def add_obligation(group_id: int, body: ObligationIn, user=Depends(viewer)):
     with db.tx() as conn:
-        require_approver(conn, group_id, user["id"])
+        require_role(conn, group_id, user["id"], "president",
+                     "Only the president can add contributions and goals.")
         if body.kind == "goal":
             if not body.goal:
                 raise HTTPException(422, "Add the goal's name, amount and due date.")
