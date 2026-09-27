@@ -456,7 +456,8 @@ def ask_ledger(group_id: int, body: Question, user=Depends(viewer)):
         members = {r["id"]: r["name"] for r in conn.execute(
             "SELECT u.id, u.name FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.group_id=?", (group_id,))}
         obligations, entries = _obligations(conn, group_id), _entries(conn, group_id)
-    query, reader = ask.interpret(q, date.today())
+    query, reader = ask.interpret(q, date.today(), members=list(members.values()),
+                                  obligations=[o["title"] for o in obligations])
     result = ask.run(query, asker=user, members=members, obligations=obligations, entries=entries, today=date.today())
     return {**result, "understood_as": query.model_dump(), "read_by": reader}
 

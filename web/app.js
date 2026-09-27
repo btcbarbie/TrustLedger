@@ -155,7 +155,7 @@ function showLanding() {
   if (!state.me) vaSet(null);
   $("#app").classList.add("hidden"); $("#flow").classList.add("hidden"); $("#groupRow").classList.add("hidden");
   $("#chatWrap").classList.add("hidden"); chatClose();
-  $("#groupTitle").textContent = "Every contribution, in the open.";
+  $("#groupTitle").textContent = "Every transaction, in the open.";
   $("#groupMeta").textContent = "A shared ledger for savings groups and cooperatives.";
   $("#chooser").classList.remove("hidden");
   const me = state.me, groups = me?.groups || [];

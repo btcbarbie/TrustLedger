@@ -33,6 +33,8 @@ PRIMARY = _provider("LLM_", "LLM_PROVIDER_LABEL", "LLM_IMAGE_MODE") or {
     "image_mode": "openai",
 }
 FALLBACK = _provider("LLM_FALLBACK_", "LLM_FALLBACK_LABEL", "LLM_FALLBACK_IMAGE_MODE")
+# Optional larger text-only model (same provider) for understanding questions in Ask.
+TEXT_MODEL = os.getenv("LLM_TEXT_MODEL", "").strip()
 LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "60"))
 
 SESSION_SECRET = os.getenv("SESSION_SECRET", "")

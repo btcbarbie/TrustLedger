@@ -39,11 +39,16 @@ def _first_json(text: str) -> dict:
     return json.loads(text[start:end + 1])
 
 
-def complete_json(prompt: str, image_bytes: bytes | None = None, mime: str = "image/png") -> dict:
+def complete_json(prompt: str, image_bytes: bytes | None = None, mime: str = "image/png",
+                  text_model: str | None = None) -> dict:
     """Returns {"data": <parsed JSON>, "provider": label, "model": id, "ms": latency}.
+    `text_model` tries a larger text-only model on the primary provider first.
     Raises LLMError if every provider fails."""
     errors = []
-    for p in [config.PRIMARY, config.FALLBACK]:
+    chain = [config.PRIMARY, config.FALLBACK]
+    if text_model and image_bytes is None:
+        chain = [{**config.PRIMARY, "model": text_model}] + chain
+    for p in chain:
         if not p:
             continue
         for _attempt in range(2):  # one retry for malformed JSON
