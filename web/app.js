@@ -159,7 +159,7 @@ function showLanding() {
   $("#groupMeta").textContent = "A shared ledger for savings groups and cooperatives.";
   $("#chooser").classList.remove("hidden");
   const me = state.me, groups = me?.groups || [];
-  $("#btnSignupStart").textContent = me ? "Create a group" : "Sign up and create a group";
+  $("#bandLede").classList.remove("hidden");
   $("#signoutRow").classList.toggle("hidden", !me);
   if (me) $("#signedInName").textContent = me.user.name;
   $("#yourGroupsSec").classList.toggle("hidden", !groups.length);
@@ -184,7 +184,7 @@ async function load(me, groupId) {
     vaSet(va.people.find((p) => p.id === me.user.id));
     return;
   }
-  $("#chooser").classList.add("hidden");
+  $("#chooser").classList.add("hidden"); $("#bandLede").classList.add("hidden");
   const ids = me.groups.map((g) => g.id);
   state.groupId = [groupId, recalledGroup(me.user.id), state.groupId].find((g) => ids.includes(g)) || ids[0];
   rememberGroup(me.user.id, state.groupId);
@@ -1200,7 +1200,14 @@ $("#formJoin").addEventListener("submit", async (ev) => {
   } catch (e) { $("#dlgJoin .result").innerHTML = `<div class="box err">${esc(e.message)}</div>`; }
 });
 
-$("#btnNewGroup").addEventListener("click", () => openNewGroup("fresh"));
+$("#btnNewGroup").addEventListener("click", () => {
+  const cta = $(".l-cta");
+  if ($("#chooser").classList.contains("hidden") || !cta) return openNewGroup("fresh");
+  // On the home page, take people to the "Start your group's ledger" section.
+  cta.classList.add("shown");
+  cta.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
+  cta.classList.remove("glow"); void cta.offsetWidth; cta.classList.add("glow");
+});
 async function goHome() {
   closeAllPopovers();
   if (state.me) state.me = await api("/api/me").catch(() => null);
@@ -1215,8 +1222,8 @@ $("#btnSignOut").addEventListener("click", async () => {
   state.me = null; state.groupId = null; va.people = await api("/api/people");
   showLanding();
 });
-$("#btnSignupStart").addEventListener("click", () => (state.me ? openNewGroup("fresh") : openSignup(() => openNewGroup("fresh"))));
-$("#btnSignupEnd").addEventListener("click", () => $("#btnSignupStart").click());
+const startGroup = () => (state.me ? openNewGroup("fresh") : openSignup(() => openNewGroup("fresh")));
+$("#btnSignupEnd").addEventListener("click", startGroup);
 async function openDemoPicker(onlyGroup) {
   va.people = await api("/api/people");
   const groups = new Map();

@@ -52,6 +52,10 @@ button::-moz-focus-inner{border:0}
 .avatar.r-member{background:var(--sky-bg);color:var(--indigo)}
 h1{font-family:var(--display);font-weight:800;font-size:clamp(26px,5vw,44px);line-height:1.05;letter-spacing:-.02em;margin:26px 0 6px;animation:rise .7s var(--ease) backwards .1s}
 .groupmeta{margin:0;color:#C9D1F2;animation:rise .7s var(--ease) backwards .18s}
+.band-lede{max-width:720px;margin:26px 0 22px;animation:rise .7s var(--ease) backwards .26s}
+.band-lede p{margin:0;font-size:19px;line-height:1.55;color:#E3E8FA}
+.band-lede .signout-row{margin-top:14px;font-size:14px;color:#C9D1F2}
+.linkish.light{color:var(--marigold)}
 
 /* ---------- money flow: in -> pot -> out ---------- */
 .flow{display:grid;grid-template-columns:1fr auto 1fr auto 1.3fr;gap:12px;align-items:center;margin-top:22px;animation:rise .8s var(--ease) backwards .25s}
@@ -340,7 +344,7 @@ button.ghost:active{transform:translateY(2px);box-shadow:0 1px 0 #C58F00}
 .cs-dot.none{display:none}
 
 /* landing */
-.landing{max-width:1100px;margin:0 auto;padding:34px 16px 70px}
+.landing{max-width:1100px;margin:0 auto;padding:8px 16px 70px}
 .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
 .reveal.shown{opacity:1;transform:none}
 .l-top{text-align:center;max-width:680px;margin:0 auto 10px}
@@ -383,6 +387,9 @@ button.ghost:active{transform:translateY(2px);box-shadow:0 1px 0 #C58F00}
 .principles{display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:var(--indigo);border-radius:22px;overflow:hidden;color:#fff}
 .pr{padding:22px 20px;border-right:1px solid rgba(255,255,255,.12)}.pr:last-child{border-right:0}
 .pr b{display:block;font:700 16px var(--body);color:var(--marigold);margin-bottom:6px}.pr p{margin:0;color:#C9D1F2;font-size:14px}
+
+.l-cta.glow{animation:ctaglow 1.6s var(--ease)}
+@keyframes ctaglow{25%{box-shadow:0 0 0 10px rgba(242,180,24,.35)}100%{box-shadow:0 0 0 0 rgba(242,180,24,0)}}
 .l-cta{margin-top:56px;text-align:center;background:var(--marigold);border-radius:22px;padding:34px 20px}
 .l-cta h2{font:800 clamp(22px,3.4vw,30px)/1.1 var(--display);margin:0 0 6px}.l-cta p{margin:0 0 16px;color:var(--marigold-ink)}
 .l-cta .primary{background:var(--night);color:#fff;box-shadow:0 3px 0 #000}

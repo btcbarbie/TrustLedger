@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&family=Unbounded:wght@500;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=36">
+<link rel="stylesheet" href="styles.css?v=39">
 </head>
 <body>
 <header class="band">
@@ -36,18 +36,15 @@
     </div>
     <h1 id="groupTitle">Every transaction, in the open.</h1>
     <p id="groupMeta" class="groupmeta">A shared ledger for savings groups and cooperatives.</p>
+    <div id="bandLede" class="band-lede hidden">
+      <p>Record every contribution with proof, let a second person confirm it, and give every member the same view of where the money is.</p>
+      <p class="signout-row hidden" id="signoutRow">Signed in as <b id="signedInName"></b>. <button type="button" class="linkish light" id="btnSignOut">Sign out</button></p>
+    </div>
     <div id="flow" class="flow hidden"></div>
   </div>
 </header>
 
 <div id="chooser" class="landing hidden">
-  <section class="l-top reveal">
-    <p class="l-lede">Record every contribution with proof, let a second person confirm it, and give every member the same view of where the money is.</p>
-    <div class="landing-actions">
-      <button class="primary" id="btnSignupStart">Sign up and create a group</button>
-    </div>
-    <p class="signout-row hidden" id="signoutRow">Signed in as <b id="signedInName"></b>. <button type="button" class="linkish" id="btnSignOut">Sign out</button></p>
-  </section>
 
   <section class="l-sec hidden reveal" id="yourGroupsSec">
     <div class="l-head"><span class="eyebrow">Your groups</span><h2 id="welcomeTitle">Welcome back</h2></div>
@@ -363,6 +360,6 @@
   </form>
 </dialog>
 
-<script src="app.js?v=36"></script>
+<script src="app.js?v=39"></script>
 </body>
 </html>
