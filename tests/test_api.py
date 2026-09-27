@@ -90,22 +90,62 @@ def test_member_payment_flow_and_no_self_approval(client, monkeypatch):
     assert client.post(f"/api/groups/1/entries/{r['id']}/decide", json={"decision": "verify"}).status_code == 403
 
 
-def test_payout_needs_second_person(client, monkeypatch):
+def request_payout(c, amount="120,000", payee="Grace Hospital Yaba"):
+    return c.post("/api/groups/1/payouts", json={"obligation_id": ob_id(c, "Medical"), "amount": amount,
+                                                 "counterparty": payee, "description": "Hospital bill"})
+
+
+def test_payout_flow_request_approve_receipt_confirm(client, monkeypatch):
     monkeypatch.setattr(proof, "read_receipt", fake_read("₦110,000.00", sender="IRETI", recipient="GRACE HOSPITAL YABA"))
     as_(client, "Amina Bello")
-    assert client.post("/api/groups/1/entries/out", data={"obligation_id": ob_id(client, "Medical"), "amount": "120000",
-                       "occurred_on": today(), "counterparty": "Grace Hospital Yaba"}).status_code == 403
+    assert request_payout(client).status_code == 403                      # members cannot request payouts
     as_(client, "Ngozi Eze")
-    r = client.post("/api/groups/1/entries/out",
-                    data={"obligation_id": ob_id(client, "Medical"), "amount": "120,000", "occurred_on": today(),
-                          "counterparty": "Grace Hospital Yaba"},
-                    files={"proof_file": ("r.png", png(), "image/png")}).json()
-    assert r["status"] == "needs_review"
-    d = client.post(f"/api/groups/1/entries/{r['id']}/decide", json={"decision": "verify"})
-    assert d.status_code == 403 and "someone else" in d.json()["detail"]
+    pid = request_payout(client).json()["id"]
+    medical = next(o for o in client.get("/api/groups/1").json()["obligations"] if "Medical" in o["title"])
+    assert medical["summary"]["spent_kobo"] == 0                          # nothing counted on request
+    assert client.post(f"/api/groups/1/payouts/{pid}/approve", json={"decision": "approve"}).status_code == 403  # own request
+    rc = client.post(f"/api/groups/1/payouts/{pid}/receipt", data={"occurred_on": today()},
+                     files={"proof_file": ("r.png", png(), "image/png")})
+    assert rc.status_code == 403                                          # no receipt before approval
     as_(client, "Halima Yusuf")
-    assert client.post(f"/api/groups/1/entries/{r['id']}/decide",
+    assert client.post(f"/api/groups/1/payouts/{pid}/approve", json={"decision": "approve"}).json()["status"] == "approved"
+    as_(client, "Ngozi Eze")
+    r = client.post(f"/api/groups/1/payouts/{pid}/receipt", data={"occurred_on": today()},
+                    files={"proof_file": ("r.png", png(), "image/png")}).json()
+    assert r["status"] == "needs_review" and "₦110,000" in r["reasons"][0] and "approved" in r["reasons"][0]
+    assert client.post(f"/api/groups/1/entries/{pid}/decide", json={"decision": "verify"}).status_code == 403  # own receipt
+    as_(client, "Halima Yusuf")
+    assert client.post(f"/api/groups/1/entries/{pid}/decide",
                        json={"decision": "reject", "note": "Receipt shows 110,000"}).json()["status"] == "rejected"
+
+
+def test_payout_matching_receipt_counts_after_confirmation(client, monkeypatch):
+    monkeypatch.setattr(proof, "read_receipt", fake_read("₦120,000.00", sender="IRETI", recipient="GRACE HOSPITAL YABA"))
+    as_(client, "Ngozi Eze")
+    pid = request_payout(client).json()["id"]
+    as_(client, "Halima Yusuf")
+    client.post(f"/api/groups/1/payouts/{pid}/approve", json={"decision": "approve"})
+    as_(client, "Ngozi Eze")
+    assert client.post(f"/api/groups/1/payouts/{pid}/receipt", data={"occurred_on": today()},
+                       files={"proof_file": ("r.png", png(), "image/png")}).json()["status"] == "documented"
+    as_(client, "Halima Yusuf")
+    client.post(f"/api/groups/1/entries/{pid}/decide", json={"decision": "verify"})
+    medical = next(o for o in client.get("/api/groups/1").json()["obligations"] if "Medical" in o["title"])
+    assert medical["summary"]["spent_kobo"] == 12_000_000 and medical["summary"]["balance_kobo"] == 0
+
+
+def test_payout_decline_and_pot_limit(client):
+    as_(client, "Ngozi Eze")
+    too_much = request_payout(client, amount="500,000")
+    assert too_much.status_code == 422 and "only has" in too_much.json()["detail"]
+    pid = request_payout(client, amount="50,000").json()["id"]
+    assert request_payout(client, amount="100,000").status_code == 422   # 120k pot minus 50k already pending
+    as_(client, "Halima Yusuf")
+    assert client.post(f"/api/groups/1/payouts/{pid}/approve", json={"decision": "decline"}).status_code == 422  # needs a note
+    assert client.post(f"/api/groups/1/payouts/{pid}/approve",
+                       json={"decision": "decline", "note": "Not agreed at the meeting"}).json()["status"] == "declined"
+    as_(client, "Ngozi Eze")
+    assert request_payout(client, amount="100,000").status_code == 200   # declined request frees the pot again
 
 
 def test_cannot_decide_entry_from_another_group(client):

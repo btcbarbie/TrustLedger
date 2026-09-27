@@ -121,7 +121,7 @@ h2.sec{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:
 /* ---------- status chips ---------- */
 .chip{display:inline-flex;align-items:center;gap:5px;font:600 12px var(--body);border-radius:999px;padding:3px 10px;white-space:nowrap}
 .chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
-.s-verified{background:var(--leaf-bg);color:var(--leaf)}.s-documented{background:var(--sky-bg);color:var(--sky)}
+.s-verified{background:var(--leaf-bg);color:var(--leaf)}.s-requested{background:#EFE9FF;color:#5B3FB0}.s-approved{background:var(--sky-bg);color:var(--indigo)}.s-declined{background:var(--kola-bg);color:var(--kola)}.s-documented{background:var(--sky-bg);color:var(--sky)}
 .s-reported{background:var(--grey-bg);color:var(--grey)}.s-needs_review{background:var(--amber-bg);color:var(--amber)}.s-rejected{background:var(--kola-bg);color:var(--kola)}
 
 /* ---------- needs attention ---------- */
@@ -151,7 +151,7 @@ h2.sec{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:
 .att-sec header p{margin:0;color:var(--muted);font-size:13px}
 .att{position:relative;display:grid;grid-template-columns:64px 1fr auto;gap:16px;align-items:start;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;overflow:hidden;transition:box-shadow .25s,transform .25s var(--ease)}
 .att::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--line)}
-.att.needs_review::before{background:var(--amber)}.att.documented::before{background:var(--sky)}.att.reported::before{background:var(--grey)}
+.att.needs_review::before{background:var(--amber)}.att.requested::before{background:#7C5CE0}.att.approved::before{background:var(--indigo)}.att.documented::before{background:var(--sky)}.att.reported::before{background:var(--grey)}
 .att:hover{box-shadow:0 12px 26px rgba(27,42,107,.08)}
 .att-proof img{width:64px;height:86px;object-fit:cover;border-radius:8px;border:1px solid var(--line);cursor:zoom-in;transition:transform .25s var(--ease)}
 .att-proof img:hover{transform:scale(1.06) rotate(-2deg)}

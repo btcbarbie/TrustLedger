@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&family=Unbounded:wght@500;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=31">
+<link rel="stylesheet" href="styles.css?v=33">
 </head>
 <body>
 <header class="band">
@@ -101,7 +101,7 @@
   <section data-panel="overview">
     <div class="actions">
       <button class="primary" id="btnPaid">I've paid</button>
-      <button class="secondary hidden" id="btnOut">Record money out</button>
+      <button class="secondary hidden" id="btnOut">Request payout</button>
       <button class="secondary hidden" id="btnAddOb">Add contribution</button>
       <button class="secondary" id="btnInvite">Invite members</button>
     </div>
@@ -134,7 +134,7 @@
       </div>
       <label class="lsearch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
         <input id="ledgerSearch" placeholder="Search a name or contribution" aria-label="Search the ledger" autocomplete="off"></label>
-      <button class="secondary hidden" id="btnOut2">Record money out</button>
+      <button class="secondary hidden" id="btnOut2">Request payout</button>
     </div>
     <div class="table-wrap"><table class="ledger"><thead><tr>
       <th>Date</th><th>Entry</th><th>Status</th><th class="num">Amount</th><th class="num">Balance after</th><th class="c">Receipt</th>
@@ -198,12 +198,21 @@
 
 <dialog id="dlgOut">
   <form method="dialog" id="formOut">
-    <h3>Record money out</h3>
-    <p class="hint">Payouts and expenses need a receipt. Someone else must confirm it.</p>
-    <div class="field"><span class="flabel" id="lblOutOb">From obligation</span><div class="cselect" data-name="obligation_id" data-labelledby="lblOutOb"></div></div>
-    <label>Paid to <input name="counterparty" required placeholder="Grace Hospital, Yaba"></label>
-    <label>What for <input name="description" placeholder="Medical bill"></label>
+    <h3>Request a payout</h3>
+    <p class="hint">Money only leaves after another leader approves. Once you have paid, upload the receipt so it can be checked against what was approved.</p>
+    <div class="field"><span class="flabel" id="lblOutOb">From which pot</span><div class="cselect" data-name="obligation_id" data-labelledby="lblOutOb"></div></div>
+    <label>Pay to <input name="counterparty" required maxlength="120" placeholder="Grace Hospital, Yaba"></label>
+    <label>What for <input name="description" maxlength="300" placeholder="Medical bill"></label>
     <label>Amount (₦) <input name="amount" required placeholder="120,000" inputmode="decimal"></label>
+    <div class="result" id="outResult"></div>
+    <menu><button value="cancel" formnovalidate class="secondary">Close</button><button class="primary" value="default">Send request</button></menu>
+  </form>
+</dialog>
+
+<dialog id="dlgReceipt">
+  <form method="dialog" id="formReceipt">
+    <h3>Upload the payout receipt</h3>
+    <div class="box ok" id="receiptSummary"></div>
     <div class="field"><span class="flabel">Date paid</span><div class="cdate" data-name="occurred_on"></div></div>
     <div class="field"><span class="flabel">Receipt</span>
       <label class="drop">
@@ -213,14 +222,14 @@
         <span class="drop-full"><img alt=""><span class="drop-meta"><b></b><small></small></span><button type="button" class="drop-x">Remove</button></span>
       </label></div>
     <p class="ai-note"></p>
-    <div class="result" id="outResult"></div>
-    <menu><button value="cancel" formnovalidate class="secondary">Close</button><button class="primary" id="outSubmit" value="default">Submit</button></menu>
+    <div class="result"></div>
+    <menu><button value="cancel" formnovalidate class="secondary">Close</button><button class="primary" value="default">Upload receipt</button></menu>
   </form>
 </dialog>
 
 <dialog id="dlgReject">
   <form method="dialog" id="formReject">
-    <h3>Reject entry</h3>
+    <h3 id="rejectTitle">Reject entry</h3>
     <label>Why? <input name="note" required placeholder="Receipt shows a different amount"></label>
     <menu><button value="cancel" formnovalidate class="secondary">Cancel</button><button class="danger" value="default">Reject</button></menu>
   </form>
@@ -353,6 +362,6 @@
   </form>
 </dialog>
 
-<script src="app.js?v=31"></script>
+<script src="app.js?v=33"></script>
 </body>
 </html>

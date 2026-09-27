@@ -121,7 +121,7 @@ def group_overview(group_id: int, user=Depends(viewer)):
         "in_kobo": sum(e["amount_kobo"] for e in entries if e["direction"] == "in" and e["status"] == "verified"),
         "out_kobo": sum(e["amount_kobo"] for e in entries if e["direction"] == "out" and e["status"] == "verified"),
         "needs_review": sum(1 for e in entries if e["status"] == "needs_review"),
-        "awaiting": sum(1 for e in entries if e["status"] in ("reported", "documented", "needs_review")),
+        "awaiting": sum(1 for e in entries if e["status"] in ("reported", "documented", "needs_review", "requested", "approved")),
     }
     totals["balance_kobo"] = totals["in_kobo"] - totals["out_kobo"]
     group.pop("invite_code", None)
@@ -140,6 +140,8 @@ def list_entries(group_id: int, user=Depends(viewer)):
     out = []
     for e in entries:
         ok, why = rules.can_decide(actor_id=user["id"], actor_role=role, entry=e)
+        ok_ap, why_ap = rules.can_approve_payout(actor_id=user["id"], actor_role=role, entry=e)
+        ok_rc, why_rc = rules.can_add_receipt(actor_role=role, entry=e)
         extraction = json.loads(e["extraction"]) if e["extraction"] else None
         out.append({
             "id": e["id"], "direction": e["direction"], "status": e["status"],
@@ -155,6 +157,9 @@ def list_entries(group_id: int, user=Depends(viewer)):
             "read_by": (extraction or {}).get("provider"), "read_ms": (extraction or {}).get("ms"),
             "extracted": (extraction or {}).get("extraction"),
             "can_decide": ok, "cannot_decide_reason": why,
+            "can_approve": ok_ap, "cannot_approve_reason": why_ap, "can_add_receipt": ok_rc,
+            "approved_by": names.get(e["approved_by"]), "approval_note": e["approval_note"],
+            "receipt_by": names.get(e["receipt_by"]),
         })
     return out
 
@@ -252,21 +257,112 @@ def record_payment(group_id: int, obligation_id: int = Form(...), amount: str = 
                        expected_names=[user["name"], *aliases], proof_file=proof_file, member_id=user["id"])
 
 
-@app.post("/api/groups/{group_id}/entries/out")
-def record_payout(group_id: int, obligation_id: int = Form(...), amount: str = Form(...),
-                  occurred_on: str = Form(...), counterparty: str = Form(...), description: str = Form(""),
-                  proof_file: UploadFile | None = File(None), user=Depends(viewer)):
-    """Money out: only the treasurer or president can record a payout or expense."""
-    counterparty, description = counterparty.strip()[:120], description.strip()[:300]
+class PayoutRequest(BaseModel):
+    obligation_id: int
+    amount: str
+    counterparty: str
+    description: str = ""
+
+
+@app.post("/api/groups/{group_id}/payouts")
+def request_payout(group_id: int, body: PayoutRequest, user=Depends(viewer)):
+    """Step 1: a leader asks to pay money out. Nothing is counted yet."""
+    counterparty, description = body.counterparty.strip()[:120], body.description.strip()[:300]
     if not counterparty:
-        raise HTTPException(422, "Enter who was paid.")
+        raise HTTPException(422, "Enter who will be paid.")
+    amount_kobo = _parse_amount(body.amount)
     with db.tx() as conn:
         if membership(conn, group_id, user["id"])["role"] not in rules.APPROVER_ROLES:
-            raise HTTPException(403, "Only the president or treasurer can record money going out.")
-        return _record(conn, group_id=group_id, user=user, direction="out", obligation_id=obligation_id,
-                       amount_kobo=_parse_amount(amount), occurred_on=_parse_date(occurred_on),
-                       expected_names=[counterparty], proof_file=proof_file,
-                       counterparty=counterparty, description=description or None)
+            raise HTTPException(403, "Only the president or treasurer can request a payout.")
+        ob = conn.execute("SELECT * FROM obligations WHERE id=? AND group_id=?", (body.obligation_id, group_id)).fetchone()
+        if not ob:
+            raise HTTPException(422, "Choose an obligation from this group.")
+        entries = _entries(conn, group_id)
+        s = rules.obligation_summary(dict(ob), _member_count(conn, group_id), entries)
+        available = s["balance_kobo"] - s["spent_pending_kobo"]
+        if amount_kobo > available:
+            raise HTTPException(422, f"This pot only has {format_naira(max(available, 0))} available after other pending payouts.")
+        eid = conn.execute(
+            "INSERT INTO entries(group_id,direction,obligation_id,counterparty,description,amount_kobo,occurred_on,source,"
+            "status,reasons,created_by,created_at) VALUES (?, 'out', ?,?,?,?,?, 'app', 'requested', ?,?,?)",
+            (group_id, body.obligation_id, counterparty, description or None, amount_kobo, date.today().isoformat(),
+             json.dumps([f"Requested {format_naira(amount_kobo)} for {counterparty}. Another leader must approve it."]),
+             user["id"], db.now_iso())).lastrowid
+        db.append_event(conn, group_id, "payout_requested", {"amount_kobo": amount_kobo, "counterparty": counterparty,
+                        "obligation_id": body.obligation_id}, entry_id=eid, actor_id=user["id"])
+    return {"id": eid, "status": "requested"}
+
+
+class Approval(BaseModel):
+    decision: str
+    note: str = ""
+
+
+@app.post("/api/groups/{group_id}/payouts/{entry_id}/approve")
+def approve_payout(group_id: int, entry_id: int, body: Approval, user=Depends(viewer)):
+    """Step 2: a different leader approves or declines before any money moves."""
+    if body.decision not in ("approve", "decline"):
+        raise HTTPException(422, "Decision must be approve or decline.")
+    note = body.note.strip()[:300]
+    with db.tx() as conn:
+        role = membership(conn, group_id, user["id"])["role"]
+        row = conn.execute("SELECT * FROM entries WHERE id=? AND group_id=? AND direction='out'", (entry_id, group_id)).fetchone()
+        if not row:
+            raise HTTPException(404, "Payout not found.")
+        ok, why = rules.can_approve_payout(actor_id=user["id"], actor_role=role, entry=dict(row))
+        if not ok:
+            raise HTTPException(403, why)
+        if body.decision == "decline" and not note:
+            raise HTTPException(422, "Add a short note explaining why it is declined.")
+        new = "approved" if body.decision == "approve" else "declined"
+        reason = (f"Approved {format_naira(row['amount_kobo'])} for {row['counterparty']}. Pay it, then upload the receipt."
+                  if new == "approved" else f"Declined: {note}")
+        conn.execute("UPDATE entries SET status=?, approved_by=?, approved_at=?, approval_note=?, reasons=? WHERE id=?",
+                     (new, user["id"], db.now_iso(), note or None, json.dumps([reason]), entry_id))
+        db.append_event(conn, group_id, f"payout_{new}", {"note": note or None}, entry_id=entry_id, actor_id=user["id"])
+    return {"id": entry_id, "status": new}
+
+
+@app.post("/api/groups/{group_id}/payouts/{entry_id}/receipt")
+def payout_receipt(group_id: int, entry_id: int, occurred_on: str = Form(...),
+                   proof_file: UploadFile = File(...), user=Depends(viewer)):
+    """Step 3: after paying, upload the receipt. AI reads it; rules compare it with what was APPROVED."""
+    paid_on = _parse_date(occurred_on)
+    with db.tx() as conn:
+        role = membership(conn, group_id, user["id"])["role"]
+        row = conn.execute("SELECT * FROM entries WHERE id=? AND group_id=? AND direction='out'", (entry_id, group_id)).fetchone()
+        if not row:
+            raise HTTPException(404, "Payout not found.")
+        entry = dict(row)
+        ok, why = rules.can_add_receipt(actor_role=role, entry=entry)
+        if not ok:
+            raise HTTPException(403, why)
+        loaded = _load_proof(proof_file)
+        if not loaded:
+            raise HTTPException(422, "Attach the receipt for this payment.")
+        data, mime, ext = loaded
+        sha = hashlib.sha256(data).hexdigest()
+        prev = conn.execute("SELECT id FROM entries WHERE group_id=? AND proof_sha256=? ORDER BY id LIMIT 1", (group_id, sha)).fetchone()
+        name = f"{uuid.uuid4().hex}{ext}"
+        (config.UPLOAD_DIR / name).write_bytes(data)
+        read = proof.read_receipt(data, mime)
+        ref = dup_ref = None
+        if read["ok"] and read["extraction"].get("reference"):
+            ref = read["extraction"]["reference"].strip()
+            p2 = conn.execute("SELECT id FROM entries WHERE group_id=? AND proof_reference=? ORDER BY id LIMIT 1", (group_id, ref)).fetchone()
+            dup_ref = p2["id"] if p2 else None
+        status, reasons = rules.assess_proof(direction="out", amount_kobo=entry["amount_kobo"], occurred_on=paid_on,
+                                             expected_names=[entry["counterparty"]], read=read,
+                                             duplicate_of_hash=prev["id"] if prev else None, duplicate_of_reference=dup_ref)
+        reasons = [r.replace("was entered", "was approved") for r in reasons]
+        conn.execute("UPDATE entries SET status=?, reasons=?, proof_path=?, proof_sha256=?, proof_reference=?, extraction=?, "
+                     "occurred_on=?, receipt_by=? WHERE id=?",
+                     (status, json.dumps(reasons), f"uploads/{name}", sha, ref, json.dumps(read), paid_on.isoformat(),
+                      user["id"], entry_id))
+        db.append_event(conn, group_id, "payout_receipt", {"status": status, "proof_sha256": sha,
+                        "read_by": read.get("provider")}, entry_id=entry_id, actor_id=user["id"])
+    return {"id": entry_id, "status": status, "reasons": reasons, "read_by": read.get("provider"),
+            "extracted": read.get("extraction")}
 
 
 class Decision(BaseModel):

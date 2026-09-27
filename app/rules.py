@@ -77,12 +77,22 @@ def assess_proof(*, direction: str, amount_kobo: int, occurred_on: date,
     return ("needs_review", reasons) if reasons else ("documented", ["Proof matches the amount, date and name."])
 
 
+PAYOUT_OPEN = ("requested", "approved")
+NOT_COUNTED = ("rejected", "declined")
+
+
 def can_decide(*, actor_id: int, actor_role: str, entry: dict) -> tuple[bool, str]:
-    """No self-approval: whoever created an entry, or whose payment it is, cannot confirm it."""
+    """No self-approval: whoever created an entry, uploaded its receipt, or whose payment it is, cannot confirm it."""
     if actor_role not in APPROVER_ROLES:
         return False, "Only the president or treasurer can confirm entries."
-    if entry["status"] in ("verified", "rejected"):
+    if entry["status"] == "requested":
+        return False, "This payout has not been approved yet."
+    if entry["status"] == "approved":
+        return False, "Approved. Waiting for the receipt after the payment is made."
+    if entry["status"] in ("verified", "rejected", "declined"):
         return False, "This entry has already been decided."
+    if entry.get("receipt_by") is not None and actor_id == entry["receipt_by"]:
+        return False, "You uploaded this receipt, so someone else must confirm it."
     if actor_id == entry["created_by"]:
         return False, "You created this entry, so someone else must confirm it."
     if entry.get("member_id") is not None and actor_id == entry["member_id"]:
@@ -90,8 +100,27 @@ def can_decide(*, actor_id: int, actor_role: str, entry: dict) -> tuple[bool, st
     return True, ""
 
 
+def can_approve_payout(*, actor_id: int, actor_role: str, entry: dict) -> tuple[bool, str]:
+    """A payout request must be approved by a leader other than the one who asked for it."""
+    if entry["status"] != "requested":
+        return False, "This payout is not waiting for approval."
+    if actor_role not in APPROVER_ROLES:
+        return False, "Waiting for a leader to approve this payout."
+    if actor_id == entry["created_by"]:
+        return False, "You requested this payout, so another leader must approve it."
+    return True, ""
+
+
+def can_add_receipt(*, actor_role: str, entry: dict) -> tuple[bool, str]:
+    if entry["status"] != "approved":
+        return False, "A receipt can only be added after the payout is approved."
+    if actor_role not in APPROVER_ROLES:
+        return False, "Approved. Waiting for a leader to upload the receipt."
+    return True, ""
+
+
 def obligation_summary(obligation: dict, member_count: int, entries: list[dict]) -> dict:
-    mine = [e for e in entries if e["obligation_id"] == obligation["id"] and e["status"] != "rejected"]
+    mine = [e for e in entries if e["obligation_id"] == obligation["id"] and e["status"] not in NOT_COUNTED]
     def total(direction, verified):
         return sum(e["amount_kobo"] for e in mine
                    if e["direction"] == direction and (e["status"] == "verified") == verified)

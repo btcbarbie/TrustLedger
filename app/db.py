@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS entries (
   amount_kobo INTEGER NOT NULL CHECK (amount_kobo > 0),
   occurred_on TEXT NOT NULL,
   source TEXT NOT NULL CHECK (source IN ('app','whatsapp_import','seed')),
-  status TEXT NOT NULL CHECK (status IN ('reported','documented','needs_review','verified','rejected')),
+  status TEXT NOT NULL CHECK (status IN ('reported','documented','needs_review','verified','rejected','requested','approved','declined')),
   reasons TEXT NOT NULL DEFAULT '[]',
   proof_path TEXT,
   proof_sha256 TEXT,
@@ -60,7 +60,11 @@ CREATE TABLE IF NOT EXISTS entries (
   created_at TEXT NOT NULL,
   decided_by INTEGER REFERENCES users(id),
   decided_at TEXT,
-  decision_note TEXT
+  decision_note TEXT,
+  approved_by INTEGER REFERENCES users(id),
+  approved_at TEXT,
+  approval_note TEXT,
+  receipt_by INTEGER REFERENCES users(id)
 );
 CREATE INDEX IF NOT EXISTS ix_entries_group ON entries(group_id);
 CREATE TABLE IF NOT EXISTS ledger_events (

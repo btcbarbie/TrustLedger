@@ -77,7 +77,7 @@ def run(query: Query, *, asker: dict, members: dict[int, str], obligations: list
         entries: list[dict], today: date) -> dict:
     """Deterministic lookup. Returns {"answer": str, "sources": [entry ids], "rows": [...]}"""
     obs_by_id = {o["id"]: o for o in obligations}
-    active = [e for e in entries if e["status"] != "rejected"]
+    active = [e for e in entries if e["status"] not in ("rejected", "declined")]
 
     def ob_match():
         if not query.obligation:

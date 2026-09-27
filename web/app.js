@@ -4,7 +4,7 @@ const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const naira = (kobo) => kobo == null ? "-" : "₦" + Math.floor(kobo / 100).toLocaleString("en-NG") + (kobo % 100 ? "." + String(kobo % 100).padStart(2, "0") : "");
 const fmtDate = (iso) => iso ? new Date(iso.slice(0, 10) + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "-";
-const STATUS = { verified: "Verified", documented: "Documented", reported: "Reported", needs_review: "Needs review", rejected: "Rejected" };
+const STATUS = { verified: "Verified", documented: "Documented", reported: "Reported", needs_review: "Needs review", rejected: "Rejected", requested: "Requested", approved: "Approved", declined: "Declined" };
 const chip = (s) => `<span class="chip s-${esc(s)}">${STATUS[s] || esc(s)}</span>`;
 const ROLE = { president: "President", treasurer: "Treasurer", member: "Member" };
 const CAT = { weekly: "Weekly", monthly: "Monthly", medical: "Medical", wedding: "Wedding", inventory: "Business", goal: "Goal", property: "Property", fees: "Fees", insurance: "Insurance" };
@@ -287,33 +287,46 @@ function aiLine(e) {
 function whoLine(e) {
   return e.direction === "in"
     ? `<b>${esc(e.member)}</b>${e.matched ? "" : " (not a member yet)"} paid <b>${esc(e.amount)}</b> for ${esc(e.obligation)}`
-    : `<b>${esc(e.created_by)}</b> paid out <b>${esc(e.amount)}</b> to ${esc(e.counterparty)} from ${esc(e.obligation)}${e.description ? ` (${esc(e.description)})` : ""}`;
+    : ["requested", "approved", "declined"].includes(e.status)
+      ? `<b>${esc(e.created_by)}</b> requested <b>${esc(e.amount)}</b> for ${esc(e.counterparty)} from ${esc(e.obligation)}${e.description ? ` (${esc(e.description)})` : ""}`
+      : `<b>${esc(e.created_by)}</b> paid out <b>${esc(e.amount)}</b> to ${esc(e.counterparty)} from ${esc(e.obligation)}${e.description ? ` (${esc(e.description)})` : ""}`;
 }
 
 const ATTN = {
+  requested: ["Payout requests", "A leader wants to pay money out. Another leader must approve it before anyone pays."],
   needs_review: ["Needs review", "Something does not match. Look at the reasons and the receipt before deciding."],
   documented: ["Ready to confirm", "The receipt matches what was entered. A second person just needs to confirm it."],
+  approved: ["Approved, waiting for receipt", "Approved payouts. Once paid, upload the receipt so it can be checked against what was approved."],
   reported: ["No proof yet", "Recorded on the member's word, with no receipt. Confirm only if you know it was paid."],
 };
 state.attnFilter = "all";
 
 function attnCard(e, i) {
-  const icon = (r) => /^Proof matches/.test(r) ? "ok" : /^No proof/.test(r) ? "info" : "warn";
+  const icon = (r) => /^(Proof matches|Approved)/.test(r) ? "ok" : /^(No proof|Requested|Claimed)/.test(r) ? "info" : "warn";
   const who = e.direction === "in" ? `<b>${esc(e.member)}</b>${e.matched ? "" : " <span class=\"meta\">(not a member yet)</span>"}`
-                                   : `<b>${esc(e.created_by)}</b> paid <b>${esc(e.counterparty)}</b>`;
+    : ["requested", "approved"].includes(e.status) ? `<b>${esc(e.created_by)}</b> wants to pay <b>${esc(e.counterparty)}</b>`
+    : `<b>${esc(e.created_by)}</b> paid <b>${esc(e.counterparty)}</b>`;
   return `<article class="att ${e.status}${rise(i)}" data-entry="${e.id}">
     <div class="att-proof">${e.has_proof
       ? `<img src="/api/groups/${state.groupId}/entries/${e.id}/proof" alt="Receipt for entry ${e.id}" data-proof="${e.id}">`
       : `<span class="noproof">No receipt</span>`}</div>
     <div class="att-body">
       <div class="att-title">${who} <span class="att-for">${e.direction === "in" ? "for" : "from"} ${esc(e.obligation)}</span></div>
-      <div class="meta">${e.direction === "in" ? "Money in" : "Money out"} - ${fmtDate(e.occurred_on)} - entry #${e.id} - recorded by ${esc(e.created_by)}</div>
+      <div class="meta">${e.direction === "in" ? "Money in" : "Money out"} - ${fmtDate(e.occurred_on)} - entry #${e.id} - ${e.direction === "out" && e.approved_by ? `approved by ${esc(e.approved_by)}` : `recorded by ${esc(e.created_by)}`}</div>
       <ul class="reasons">${e.reasons.map((r) => `<li class="${icon(r)}">${esc(r)}</li>`).join("")}</ul>
       ${aiLine(e)}
     </div>
     <div class="att-side">
       <div class="att-amt ${e.direction}">${e.direction === "in" ? "+" : "-"}${esc(e.amount)}</div>
-      ${e.can_decide
+      ${e.status === "requested"
+        ? (e.can_approve
+          ? `<div class="att-btns"><button class="secondary sm" data-decline="${e.id}">Decline</button><button class="primary sm" data-approve="${e.id}">Approve</button></div>`
+          : `<div class="lock">${esc(e.cannot_approve_reason)}</div>`)
+        : e.status === "approved"
+        ? (e.can_add_receipt
+          ? `<div class="att-btns"><button class="primary sm" data-receipt="${e.id}">Upload receipt</button></div><div class="meta">Approved by ${esc(e.approved_by)}</div>`
+          : `<div class="lock">Approved by ${esc(e.approved_by)}. Waiting for the receipt.</div>`)
+        : e.can_decide
         ? `<div class="att-btns"><button class="secondary sm" data-reject="${e.id}">Reject</button><button class="primary sm" data-verify="${e.id}">Verify</button></div>`
         : `<div class="lock">${esc(e.cannot_decide_reason)}</div>`}
     </div>
@@ -440,6 +453,10 @@ async function renderActivity(keepPage) {
       entry_decided: () => `${d.decision === "verified" ? "verified" : "rejected"} entry #${x.entry_id}${d.note ? ` - "${d.note}"` : ""}`,
       group_created: () => `created the group${d.from === "whatsapp" ? ` from a WhatsApp chat of ${d.messages} messages` : ""}`,
       member_added: () => `added a ${d.role}`,
+      payout_requested: () => `requested a payout of ${naira(d.amount_kobo)} to ${d.counterparty}`,
+      payout_approved: () => `approved payout #${x.entry_id}`,
+      payout_declined: () => `declined payout #${x.entry_id}${d.note ? ` - "${d.note}"` : ""}`,
+      payout_receipt: () => `uploaded the receipt for payout #${x.entry_id} (${(d.status || "").replace("_", " ")})`,
       obligation_added: () => d.series ? `added ${d.series}: ${naira(d.amount_kobo)} x ${d.periods}` : `added the goal "${d.title}" (${naira(d.amount_kobo)} each)`,
     }[x.action]?.() || x.action;
     return `<li style="--i:${i}" class="rise"><b>${esc(x.actor)}</b> ${esc(what)} <span class="meta">- ${new Date(x.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}</span><br><code>seal ${esc(x.hash)}</code></li>`;
@@ -680,9 +697,9 @@ function openForm(dlg, obligationId) {
       .map((o) => ({ value: o.id, label: o.title.replace("Weekly contribution - ", "Weekly - "), sub: sub(o), group: "Weekly contributions", cat: "weekly" })),
   ];
   makeSelect($(".cselect", f), options, obligationId || options[0].value);
-  makeDate($(".cdate", f), today, today);
+  if ($(".cdate", f)) makeDate($(".cdate", f), today, today);
   const ai = state.overview.ai;
-  $(".ai-note", dlg).textContent = `Your ${dlg.id === "dlgOut" ? "receipt" : "screenshot"} is read by AI (${ai.primary}${ai.fallback ? `, backup ${ai.fallback}` : ""}) and checked against what you enter. A person always makes the final call.`;
+  if ($(".ai-note", dlg)) $(".ai-note", dlg).textContent = `Your ${dlg.id === "dlgOut" ? "receipt" : "screenshot"} is read by AI (${ai.primary}${ai.fallback ? `, backup ${ai.fallback}` : ""}) and checked against what you enter. A person always makes the final call.`;
   $(".drop", f)?._reset?.();
   dlg.showModal();
 }
@@ -800,7 +817,7 @@ function switchTab(tab) {
   if (tab === "ask") { renderSuggestions(); $("#askForm").q.focus(); }
 }
 
-let rejectId = null;
+let rejectId = null, rejectMode = "reject";
 document.addEventListener("click", async (ev) => {
   const t = ev.target.closest("button, [data-member], img[data-proof]") || ev.target;
   if (t.dataset.tab) switchTab(t.dataset.tab);
@@ -819,6 +836,17 @@ document.addEventListener("click", async (ev) => {
     keepPlace(".ledger-tools", renderLedger);
   } else if (t.dataset.member) showRecord(t.dataset.member);
   else if (t.dataset.ask) askQuestion(t.dataset.ask, t.closest("#chatPanel") ? $("#chatLog") : $("#askLog"));
+  else if (t.dataset.approve) {
+    const e = state.entries.find((x) => x.id === +t.dataset.approve);
+    const okGo = await confirmBox({ title: "Approve this payout?", ok: "Yes, approve", tone: "ok",
+      body: sumList([["Requested by", e.created_by], ["Pay to", e.counterparty], ["Amount", e.amount], ["From", e.obligation], ["What for", e.description]]) +
+        `<p class="meta">Approving lets ${esc(e.created_by.split(" ")[0])} make the payment. It only counts once the receipt is checked and confirmed.</p>` });
+    if (!okGo) return;
+    try { await post(`/api/groups/${state.groupId}/payouts/${e.id}/approve`, { decision: "approve" }); await refresh(); }
+    catch (err) { alert(err.message); }
+  }
+  else if (t.dataset.decline) { rejectId = t.dataset.decline; rejectMode = "decline"; $("#rejectTitle").textContent = "Decline this payout request"; $("#formReject").reset(); $("#dlgReject").showModal(); }
+  else if (t.dataset.receipt) openReceipt(+t.dataset.receipt);
   else if (t.dataset.attn) { state.attnFilter = t.dataset.attn; keepPlace(".att-filters", renderAttention); $(`.att-filters [data-attn="${t.dataset.attn}"]`)?.focus({ preventScroll: true }); }
   else if (t.dataset.demoAs) { if ($("#dlgDemo").open) $("#dlgDemo").close(); await post("/api/view-as", { user_id: +t.dataset.demoAs }); await load(null, +t.dataset.demoGroup); }
   else if (t.dataset.openGroup) load(null, +t.dataset.openGroup);
@@ -838,7 +866,7 @@ document.addEventListener("click", async (ev) => {
     if (!okGo) return;
     t.disabled = true;
     try { await decide(t.dataset.verify, "verify"); } catch (e) { alert(e.message); t.disabled = false; }
-  } else if (t.dataset.reject) { rejectId = t.dataset.reject; $("#formReject").reset(); $("#dlgReject").showModal(); }
+  } else if (t.dataset.reject) { rejectId = t.dataset.reject; rejectMode = "reject"; $("#rejectTitle").textContent = "Reject entry"; $("#formReject").reset(); $("#dlgReject").showModal(); }
   else if (t.dataset.proof) window.open(t.src, "_blank", "noopener");
 });
 document.addEventListener("keydown", (ev) => {
@@ -850,13 +878,65 @@ $("#btnOut").addEventListener("click", () => openForm($("#dlgOut")));
 $("#btnOut2").addEventListener("click", () => openForm($("#dlgOut")));
 $("#ledgerSearch").addEventListener("input", (ev) => { state.ledgerQ = ev.target.value.trim(); state.ledgerPage = 1; keepPlace(".ledger-tools", renderLedger); });
 $("#formPaid").addEventListener("submit", (e) => submitEntry(e, $("#dlgPaid"), `/api/groups/${state.groupId}/entries/in`));
-$("#formOut").addEventListener("submit", (e) => submitEntry(e, $("#dlgOut"), `/api/groups/${state.groupId}/entries/out`));
+$("#formOut").addEventListener("submit", async (ev) => {
+  if (ev.submitter?.value === "cancel") return;
+  ev.preventDefault();
+  const f = ev.target, out = $(".result", $("#dlgOut"));
+  const okGo = await confirmBox({ title: "Send this payout request?", ok: "Yes, send it",
+    body: sumList([["Pay to", f.counterparty.value], ["Amount", `₦${f.amount.value}`], ["From", $(".cselect .cs-btn b", f).textContent], ["What for", f.description.value]]) +
+      `<p class="meta">Nothing is paid or counted yet. Another leader must approve it first.</p>` });
+  if (!okGo) return;
+  try {
+    const r = await post(`/api/groups/${state.groupId}/payouts`, { obligation_id: +$("[name=obligation_id]", f).value,
+      amount: f.amount.value, counterparty: f.counterparty.value, description: f.description.value });
+    out.innerHTML = `<div class="box ok">${chip(r.status)} <b>Request #${r.id} sent.</b><div class="meta">It is waiting for another leader to approve it.</div></div>`;
+    await refresh();
+  } catch (e) { out.innerHTML = `<div class="box err">${esc(e.message)}</div>`; }
+});
+
+let receiptFor = null;
+function openReceipt(id) {
+  const e = state.entries.find((x) => x.id === id); receiptFor = e;
+  const f = $("#formReceipt"); f.reset(); closeAllPopovers(); $("#dlgReceipt .result").innerHTML = "";
+  $("#receiptSummary").innerHTML = `Approved by <b>${esc(e.approved_by)}</b>: <b>${esc(e.amount)}</b> to <b>${esc(e.counterparty)}</b> from ${esc(e.obligation)}.<div class="meta">The receipt must match this amount and payee.</div>`;
+  makeDate($(".cdate", f), state.overview.today, state.overview.today);
+  $(".drop", f)._reset?.();
+  const ai = state.overview.ai;
+  $(".ai-note", f).textContent = `The receipt is read by AI (${ai.primary}) and compared with what was approved. Another leader confirms it.`;
+  $("#dlgReceipt").showModal();
+}
+$("#formReceipt").addEventListener("submit", async (ev) => {
+  if (ev.submitter?.value === "cancel") return;
+  ev.preventDefault();
+  const f = ev.target, out = $(".result", $("#dlgReceipt")), btn = $("button.primary", f), file = $("[name=proof_file]", f).files[0];
+  if (!file) { out.innerHTML = `<div class="box err">Add the receipt image first.</div>`; return; }
+  const okGo = await confirmBox({ title: "Upload this receipt?", ok: "Yes, upload",
+    body: sumList([["Approved", `${receiptFor.amount} to ${receiptFor.counterparty}`], ["Date paid", $(".cdate .cs-btn b", f).textContent], ["Receipt", file.name]]) +
+      `<p class="meta">AI reads the receipt and flags anything that does not match the approval.</p>` });
+  if (!okGo) return;
+  btn.disabled = true;
+  const url = URL.createObjectURL(file);
+  out.innerHTML = `<div class="scan"><img src="${url}" alt=""><i></i></div><div class="scanning">AI is reading the receipt<span class="dots"></span></div>`;
+  try {
+    const r = await api(`/api/groups/${state.groupId}/payouts/${receiptFor.id}/receipt`, { method: "POST", body: new FormData(f) });
+    const x = r.extracted;
+    out.innerHTML = `<div class="box ${r.status === "documented" ? "ok" : "warn"}">${chip(r.status)} <b>Receipt added.</b>
+      <ul>${r.reasons.map((m) => `<li>${esc(m)}</li>`).join("")}</ul>
+      ${x ? `<div class="meta">Read on the receipt: ${esc([x.amount_text, x.date_text, x.recipient_name].filter(Boolean).join(" - "))} (${esc(r.read_by)})</div>` : ""}
+      <div class="meta" style="margin-top:6px">Another leader must confirm it before it counts.</div></div>`;
+    await refresh();
+  } catch (e) { out.innerHTML = `<div class="box err">${esc(e.message)}</div>`; }
+  finally { btn.disabled = false; URL.revokeObjectURL(url); }
+});
 $("#formReject").addEventListener("submit", async (ev) => {
   if (ev.submitter?.value === "cancel") return;
   ev.preventDefault();
   const note = ev.target.note.value;
   $("#dlgReject").close();
-  try { await decide(rejectId, "reject", note); } catch (e) { alert(e.message); }
+  try {
+    if (rejectMode === "decline") { await post(`/api/groups/${state.groupId}/payouts/${rejectId}/approve`, { decision: "decline", note }); await refresh(); }
+    else await decide(rejectId, "reject", note);
+  } catch (e) { alert(e.message); }
 });
 $("#btnVerify").addEventListener("click", async () => {
   const r = await api(`/api/groups/${state.groupId}/verify`);
