@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrustLedger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&family=Unbounded:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=31">
+</head>
+<body>
+<header class="band">
+  <div class="band-inner">
+    <div class="topline">
+      <button type="button" class="brand" id="homeLink" aria-label="TrustLedger home"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span><span class="word">TrustLedger</span></button>
+      <div class="top-actions">
+      <button type="button" class="ghost" id="btnNewGroup">New group</button>
+      <div class="viewas" id="viewAs">
+        <span class="va-label">Viewing as</span>
+        <button type="button" class="va-btn" id="vaBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="vaMenu">
+          <span class="avatar sm" id="vaAvatar" aria-hidden="true">?</span>
+          <span class="va-text"><b id="vaName">Choose a person</b><small id="vaRole">No login in this demo</small></span>
+          <svg class="va-chev" width="12" height="8" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+        </button>
+        <ul class="va-menu" id="vaMenu" role="listbox" aria-label="Choose who you are viewing as" tabindex="-1" hidden></ul>
+      </div>
+      </div>
+    </div>
+    <div class="grouprow hidden" id="groupRow">
+      <button type="button" class="backbtn" id="btnBack" aria-label="Back to home">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Home</span>
+      </button>
+      <div class="gswitch hidden" id="groupSwitch"><div class="cselect dark" data-name="group" data-labelledby="groupTitle"></div></div>
+    </div>
+    <h1 id="groupTitle">Every contribution, in the open.</h1>
+    <p id="groupMeta" class="groupmeta">A shared ledger for savings groups and cooperatives.</p>
+    <div id="flow" class="flow hidden"></div>
+  </div>
+</header>
+
+<div id="chooser" class="landing hidden">
+  <section class="l-top reveal">
+    <p class="l-lede">Record every contribution with proof, let a second person confirm it, and give every member the same view of where the money is.</p>
+    <div class="landing-actions">
+      <button class="primary" id="btnSignupStart">Sign up and create a group</button>
+    </div>
+    <p class="signout-row hidden" id="signoutRow">Signed in as <b id="signedInName"></b>. <button type="button" class="linkish" id="btnSignOut">Sign out</button></p>
+  </section>
+
+  <section class="l-sec hidden reveal" id="yourGroupsSec">
+    <div class="l-head"><span class="eyebrow">Your groups</span><h2 id="welcomeTitle">Welcome back</h2></div>
+    <div id="myGroups" class="cards mygroups"></div>
+  </section>
+
+  <section class="l-sec how reveal">
+    <div class="l-head"><h2>How TrustLedger works</h2></div>
+    <ol class="steps">
+      <li><span class="step-ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.4"/><path d="M3 19c.8-3.4 3.2-5 6-5s5.2 1.6 6 5M15 14.5c2.6-.2 4.6 1.2 5.3 4"/></svg></span>
+        <b>Set up your group</b><p>Add members, roles, contributions, and goals.</p></li>
+      <li><span class="step-ic"><svg viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="2.5"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
+        <b>Add a payment</b><p>Upload proof. AI extracts the key details.</p></li>
+      <li><span class="step-ic"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></span>
+        <b>Verify it</b><p>Another member confirms the record or flags an issue.</p></li>
+      <li><span class="step-ic"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg></span>
+        <b>See your history</b><p>Track money in, money out, balances, and goals - all in one place.</p></li>
+    </ol>
+  </section>
+
+  <section class="l-sec reveal" id="demoSec">
+    <div class="l-head"><span class="eyebrow">Try it now</span><h2>Demo groups</h2>
+      <p>Made-up groups with months of history. Open one as its treasurer, or view it as any member.</p></div>
+    <div id="showcase" class="showcase"></div>
+  </section>
+
+  <section class="l-sec principles reveal">
+    <div class="pr"><b>AI reads, people decide</b><p>The AI only reads receipts and messages. Fixed rules do the maths, and a person always makes the final call.</p></div>
+    <div class="pr"><b>No self-approval</b><p>The person who records an entry can never confirm it. That includes the treasurer.</p></div>
+    <div class="pr"><b>History you can check</b><p>Each action is sealed to the one before it. If anyone edits the past, the integrity check fails.</p></div>
+    <div class="pr"><b>A record, not a score</b><p>Members get a factual payment record. No hidden scores, no automated decisions about people.</p></div>
+  </section>
+
+  <section class="l-cta reveal">
+    <h2>Start your group's ledger</h2>
+    <p>It takes a minute to set up. Invite your members with a link.</p>
+    <button class="primary" id="btnSignupEnd">Create a group</button>
+  </section>
+</div>
+
+<main id="app" class="hidden">
+  <nav class="tabs" id="tabs">
+    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="ask">Ask</button>
+    <button data-tab="attention">Needs attention <span id="attnCount" class="badge">0</span></button>
+    <button data-tab="ledger">Ledger</button>
+    <button data-tab="members">Members</button>
+    <button data-tab="activity">Activity</button>
+  </nav>
+
+  <section data-panel="overview">
+    <div class="actions">
+      <button class="primary" id="btnPaid">I've paid</button>
+      <button class="secondary hidden" id="btnOut">Record money out</button>
+      <button class="secondary hidden" id="btnAddOb">Add contribution</button>
+      <button class="secondary" id="btnInvite">Invite members</button>
+    </div>
+    <h2 class="sec">What the group is saving for</h2>
+    <div class="cards" id="obligations"></div>
+  </section>
+
+  <section data-panel="ask" class="hidden">
+    <div class="ask">
+      <div class="ask-log" id="askLog" aria-live="polite"></div>
+      <div class="ask-suggest" id="askSuggest"></div>
+      <form id="askForm" class="ask-bar" autocomplete="off">
+        <input name="q" maxlength="500" placeholder="Ask about your group's money" aria-label="Your question">
+        <button class="primary" type="submit">Ask</button>
+      </form>
+      <p class="hint">Answers are looked up from this group's ledger and show the entries they came from. The AI only works out what you are asking, and it cannot change anything.</p>
+    </div>
+  </section>
+
+  <section data-panel="attention" class="hidden">
+    <p class="hint">Every payment and payout needs a second person to confirm it before it counts. Nobody can confirm their own entry.</p>
+    <div id="attention"></div>
+  </section>
+
+  <section data-panel="ledger" class="hidden">
+    <div class="ledger-summary" id="ledgerSummary"></div>
+    <div class="ledger-tools">
+      <div class="filters" id="ledgerFilters">
+        <button data-f="all" class="active">All</button><button data-f="in">Money in</button><button data-f="out">Money out</button>
+      </div>
+      <label class="lsearch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+        <input id="ledgerSearch" placeholder="Search a name or contribution" aria-label="Search the ledger" autocomplete="off"></label>
+      <button class="secondary hidden" id="btnOut2">Record money out</button>
+    </div>
+    <div class="table-wrap"><table class="ledger"><thead><tr>
+      <th>Date</th><th>Entry</th><th>Status</th><th class="num">Amount</th><th class="num">Balance after</th><th class="c">Receipt</th>
+    </tr></thead><tbody id="ledgerBody"></tbody></table></div>
+    <div class="pager" id="ledgerPager"></div>
+  </section>
+
+  <section data-panel="members" class="hidden">
+    <div id="members" class="cards"></div>
+    <div id="record"></div>
+  </section>
+
+  <section data-panel="activity" class="hidden">
+    <div class="actions"><button class="secondary" id="btnVerify">Check ledger integrity</button><span id="verifyResult"></span></div>
+    <p class="hint">Every action is sealed to the one before it. If anyone edits past history, the check fails.</p>
+    <ol id="events" class="events"></ol>
+    <div class="pager" id="eventsPager"></div>
+  </section>
+</main>
+
+<div class="chat-wrap hidden" id="chatWrap">
+  <section class="chat-panel" id="chatPanel" hidden role="dialog" aria-label="Ask TrustLedger">
+    <header class="chat-head">
+      <span class="chat-dot" aria-hidden="true"></span>
+      <div><b>Ask TrustLedger</b><small id="chatGroup"></small></div>
+      <button type="button" class="chat-x" id="chatClose" aria-label="Close chat">&times;</button>
+    </header>
+    <div class="chat-body">
+      <div class="ask-log" id="chatLog" aria-live="polite"></div>
+      <div class="ask-suggest" id="chatSuggest"></div>
+    </div>
+    <form id="chatForm" class="ask-bar chat-bar" autocomplete="off">
+      <input name="q" maxlength="500" placeholder="Ask about the group's money" aria-label="Your question">
+      <button class="primary" type="submit">Ask</button>
+    </form>
+  </section>
+  <button type="button" class="chat-fab" id="chatFab" aria-label="Ask TrustLedger" aria-expanded="false" aria-controls="chatPanel">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span>Ask</span>
+  </button>
+</div>
+
+<dialog id="dlgPaid">
+  <form method="dialog" id="formPaid">
+    <h3>I've paid</h3>
+    <p class="hint">Pay by bank transfer or mobile money first, then record it here with your screenshot.</p>
+    <div class="field"><span class="flabel" id="lblPaidOb">For</span><div class="cselect" data-name="obligation_id" data-labelledby="lblPaidOb"></div></div>
+    <label>Amount (₦) <input name="amount" required placeholder="5,000" inputmode="decimal"></label>
+    <div class="field"><span class="flabel">Date paid</span><div class="cdate" data-name="occurred_on"></div></div>
+    <div class="field"><span class="flabel">Transfer screenshot</span>
+      <label class="drop">
+        <input name="proof_file" type="file" accept="image/png,image/jpeg,image/webp" class="sr-only">
+        <span class="drop-empty"><svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0l-5 5m5-5l5 5M4 20h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <b>Add transfer screenshot</b><small>Tap to choose, or drop an image here. PNG, JPG or WEBP, up to 5 MB.</small></span>
+        <span class="drop-full"><img alt=""><span class="drop-meta"><b></b><small></small></span><button type="button" class="drop-x">Remove</button></span>
+      </label></div>
+    <p class="ai-note"></p>
+    <div class="result" id="paidResult"></div>
+    <menu><button value="cancel" formnovalidate class="secondary">Close</button><button class="primary" id="paidSubmit" value="default">Submit</button></menu>
+  </form>
+</dialog>
+
+<dialog id="dlgOut">
+  <form method="dialog" id="formOut">
+    <h3>Record money out</h3>
+    <p class="hint">Payouts and expenses need a receipt. Someone else must confirm it.</p>
+    <div class="field"><span class="flabel" id="lblOutOb">From obligation</span><div class="cselect" data-name="obligation_id" data-labelledby="lblOutOb"></div></div>
+    <label>Paid to <input name="counterparty" required placeholder="Grace Hospital, Yaba"></label>
+    <label>What for <input name="description" placeholder="Medical bill"></label>
+    <label>Amount (₦) <input name="amount" required placeholder="120,000" inputmode="decimal"></label>
+    <div class="field"><span class="flabel">Date paid</span><div class="cdate" data-name="occurred_on"></div></div>
+    <div class="field"><span class="flabel">Receipt</span>
+      <label class="drop">
+        <input name="proof_file" type="file" accept="image/png,image/jpeg,image/webp" class="sr-only">
+        <span class="drop-empty"><svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0l-5 5m5-5l5 5M4 20h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <b>Add receipt</b><small>Tap to choose, or drop an image here. PNG, JPG or WEBP, up to 5 MB.</small></span>
+        <span class="drop-full"><img alt=""><span class="drop-meta"><b></b><small></small></span><button type="button" class="drop-x">Remove</button></span>
+      </label></div>
+    <p class="ai-note"></p>
+    <div class="result" id="outResult"></div>
+    <menu><button value="cancel" formnovalidate class="secondary">Close</button><button class="primary" id="outSubmit" value="default">Submit</button></menu>
+  </form>
+</dialog>
+
+<dialog id="dlgReject">
+  <form method="dialog" id="formReject">
+    <h3>Reject entry</h3>
+    <label>Why? <input name="note" required placeholder="Receipt shows a different amount"></label>
+    <menu><button value="cancel" formnovalidate class="secondary">Cancel</button><button class="danger" value="default">Reject</button></menu>
+  </form>
+</dialog>
+
+<dialog id="dlgConfirm" class="confirm">
+  <form method="dialog">
+    <span class="cf-icon" id="cfIcon" aria-hidden="true"></span>
+    <h3 id="cfTitle">Are you sure?</h3>
+    <div id="cfBody" class="cf-body"></div>
+    <menu><button value="cancel" class="secondary">Go back</button><button value="ok" class="primary" id="cfOk">Confirm</button></menu>
+  </form>
+</dialog>
+
+<dialog id="dlgDemo" class="wide">
+  <form method="dialog">
+    <h3>Explore a demo group</h3>
+    <p class="hint">All data here is made up. Pick a group, then choose who to view it as. Leaders can confirm entries and record money out; members can record their own payments.</p>
+    <div id="demoList" class="demo-list"></div>
+    <menu><button value="cancel" class="secondary">Close</button></menu>
+  </form>
+</dialog>
+
+<dialog id="dlgSignup">
+  <form method="dialog" id="formSignup">
+    <h3>Create your account</h3>
+    <p class="hint">No password in this demo. The real app will confirm your phone number with a code.</p>
+    <label>Your name <input name="name" required minlength="2" maxlength="60" placeholder="Grace Nwosu" autocomplete="name"></label>
+    <div class="result"></div>
+    <menu><button value="cancel" formnovalidate class="secondary">Cancel</button><button class="primary" value="default">Continue</button></menu>
+  </form>
+</dialog>
+
+<dialog id="dlgNewGroup" class="wide">
+  <form method="dialog" id="formNewGroup">
+    <h3>New group</h3>
+    <div class="seg" role="tablist" aria-label="How to start">
+      <button type="button" role="tab" class="on" data-mode="fresh" aria-selected="true">Start fresh</button>
+      <button type="button" role="tab" data-mode="import" aria-selected="false">Import from WhatsApp</button>
+    </div>
+
+    <div class="mode" data-pane="fresh">
+      <label>Group name <input name="name" maxlength="80" placeholder="Oja Oba Savers"></label>
+      <div class="field"><span class="flabel" id="lblMyRole">Your role</span><div class="cselect" data-name="my_role" data-labelledby="lblMyRole"></div></div>
+      <div class="field"><span class="flabel">Members</span>
+        <div class="chips" id="memberChips"></div>
+        <div class="addrow"><input id="memberInput" maxlength="60" placeholder="Type a name, then press Add" aria-label="Member name"><button type="button" class="secondary" id="btnAddMember">Add</button></div>
+      </div>
+      <div class="field"><span class="flabel" id="lblLeader">President - confirms your entries</span><div class="cselect" data-name="second_leader" data-labelledby="lblLeader"></div></div>
+      <fieldset class="group-box"><legend>Regular contribution</legend>
+        <div class="two"><label>Amount per member (₦) <input name="c_amount" inputmode="decimal" placeholder="5,000" value="5,000"></label>
+          <div class="field"><span class="flabel" id="lblFreq">How often</span><div class="cselect" data-name="c_frequency" data-labelledby="lblFreq"></div></div></div>
+        <div class="two"><div class="field"><span class="flabel">First due date</span><div class="cdate" data-name="c_first_due"></div></div>
+          <label>How many times <input name="c_periods" type="number" min="1" max="104" value="12"></label></div>
+      </fieldset>
+      <label class="check"><input type="checkbox" id="goalToggle"> Add a one-off goal too (for example a wedding or bulk purchase)</label>
+      <fieldset class="group-box hidden" id="goalBox"><legend>One-off goal</legend>
+        <label>What for <input name="g_title" maxlength="80" placeholder="Christmas bulk buy"></label>
+        <div class="two"><label>Amount per member (₦) <input name="g_amount" inputmode="decimal" placeholder="20,000"></label>
+          <div class="field"><span class="flabel">Due date</span><div class="cdate" data-name="g_due"></div></div></div>
+      </fieldset>
+    </div>
+
+    <div class="mode hidden" data-pane="import">
+      <div class="import-step" data-step="1">
+        <p class="hint">In WhatsApp, open your group, tap the group name, then <b>Export chat</b> and choose <b>Without media</b>. Upload the .txt file here.</p>
+        <div class="field"><span class="flabel">Chat export</span>
+          <label class="drop" data-kind="chat">
+            <input name="chat_file" type="file" accept=".txt,text/plain" class="sr-only">
+            <span class="drop-empty"><svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+              <b>Add chat export</b><small>Tap to choose, or drop the .txt file here. Up to 1 MB.</small></span>
+            <span class="drop-full"><img alt=""><span class="drop-meta"><b></b><small></small></span><button type="button" class="drop-x">Remove</button></span>
+          </label></div>
+      </div>
+      <div class="import-step hidden" data-step="2">
+        <div class="box ok" id="importSummary"></div>
+        <label>Group name <input name="i_name" maxlength="80"></label>
+        <div class="two"><div class="field"><span class="flabel" id="lblMe">Which one is you?</span><div class="cselect" data-name="i_me" data-labelledby="lblMe"></div></div>
+          <div class="field"><span class="flabel" id="lblIRole">Your role</span><div class="cselect" data-name="i_role" data-labelledby="lblIRole"></div></div></div>
+        <div class="field"><span class="flabel" id="lblILeader">President - confirms your entries</span><div class="cselect" data-name="i_leader" data-labelledby="lblILeader"></div></div>
+        <div class="two"><label>Contribution per member (₦) <input name="i_amount" inputmode="decimal" value="2,000"></label>
+          <div class="field"><span class="flabel" id="lblIFreq">How often</span><div class="cselect" data-name="i_frequency" data-labelledby="lblIFreq"></div></div></div>
+      </div>
+    </div>
+    <div class="result"></div>
+    <menu><button value="cancel" formnovalidate class="secondary">Cancel</button><button class="primary" value="default" id="ngSubmit">Create group</button></menu>
+  </form>
+</dialog>
+
+<dialog id="dlgAddOb">
+  <form method="dialog" id="formAddOb">
+    <h3>Add contribution</h3>
+    <div class="seg" role="tablist" aria-label="Kind of contribution">
+      <button type="button" role="tab" class="on" data-kind="recurring" aria-selected="true">Recurring</button>
+      <button type="button" role="tab" data-kind="goal" aria-selected="false">One-off goal</button>
+    </div>
+    <div data-kpane="recurring">
+      <label>Name <input name="series_name" maxlength="60" value="Monthly dues"></label>
+      <div class="two"><label>Amount per member (₦) <input name="r_amount" inputmode="decimal" placeholder="10,000"></label>
+        <div class="field"><span class="flabel" id="lblAFreq">How often</span><div class="cselect" data-name="r_frequency" data-labelledby="lblAFreq"></div></div></div>
+      <div class="two"><div class="field"><span class="flabel">First due date</span><div class="cdate" data-name="r_first_due"></div></div>
+        <label>How many times <input name="r_periods" type="number" min="1" max="104" value="6"></label></div>
+    </div>
+    <div data-kpane="goal" class="hidden">
+      <label>What for <input name="a_title" maxlength="80" placeholder="Generator repair"></label>
+      <div class="two"><label>Amount per member (₦) <input name="a_amount" inputmode="decimal" placeholder="3,000"></label>
+        <div class="field"><span class="flabel">Due date</span><div class="cdate" data-name="a_due"></div></div></div>
+    </div>
+    <div class="result"></div>
+    <menu><button value="cancel" formnovalidate class="secondary">Cancel</button><button class="primary" value="default">Add</button></menu>
+  </form>
+</dialog>
+
+<dialog id="dlgInvite">
+  <form method="dialog">
+    <h3>Invite members</h3>
+    <p class="hint">Share this link in your WhatsApp group. People who open it can sign up and join as members.</p>
+    <div class="linkbox"><code id="inviteLink"></code><button type="button" class="primary" id="btnCopy">Copy link</button></div>
+    <menu><button value="cancel" class="secondary">Done</button></menu>
+  </form>
+</dialog>
+
+<dialog id="dlgJoin">
+  <form method="dialog" id="formJoin">
+    <h3 id="joinTitle">Join group</h3>
+    <p class="hint" id="joinHint"></p>
+    <label id="joinNameRow">Your name <input name="name" maxlength="60" placeholder="Your full name" autocomplete="name"></label>
+    <div class="result"></div>
+    <menu><button value="cancel" formnovalidate class="secondary">Not now</button><button class="primary" value="default" id="joinBtn">Join group</button></menu>
+  </form>
+</dialog>
+
+<script src="app.js?v=31"></script>
+</body>
+</html>
