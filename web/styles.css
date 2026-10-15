@@ -596,3 +596,24 @@ dialog.wide{width:min(600px,94vw)}
 .ai-note-box p{margin:4px 0 0}
 .bank-ok summary{cursor:pointer}.bank-ok ul{margin:10px 0 0;padding-left:18px;font-size:14px;line-height:1.6}
 #bankResult>.box{padding:12px 14px;border-radius:12px;margin-bottom:14px}
+
+/* share with a lender */
+.share-box{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.share-box h4{font:700 16px var(--body);margin:0 0 4px}
+.share-box .actions{margin:12px 0}
+.share-box .box{padding:12px 14px;border-radius:12px}
+.share-sum{margin:8px 0 4px;font-size:15px}
+.share-links{list-style:none;padding:0;margin:6px 0 0;display:grid;gap:6px}
+.share-links li{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;font-size:14px}
+.share-links a{color:var(--indigo);overflow-wrap:anywhere}
+.share-note{margin-top:14px}
+button.sm{padding:8px 14px;font-size:14px}
+/* find financing */
+#financeResult>.box{padding:12px 14px;border-radius:12px;margin-bottom:14px}
+.fin-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:12px}
+.fin-facts div{background:var(--paper);border-radius:10px;padding:10px 12px}
+.fin-facts b{display:block;font:700 18px var(--display);color:var(--indigo)}.fin-facts small{color:var(--muted);font-size:12px}
+.fin-opt{margin-bottom:12px}.fin-opt:hover{transform:none;box-shadow:none}
+.fin-opt a{color:var(--indigo)}
+.fin-opt p{margin:8px 0}
+.fin-req{margin:4px 0 8px;padding-left:18px;font-size:14px}

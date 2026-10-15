@@ -39,6 +39,11 @@ VISION_MODEL = os.getenv("LLM_VISION_MODEL", "").strip() or PRIMARY["model"]
 FAST_MODEL = (os.getenv("LLM_FAST_MODEL", "") or os.getenv("LLM_TEXT_MODEL", "")).strip() or PRIMARY["model"]
 REASONING_MODEL = os.getenv("LLM_REASONING_MODEL", "").strip() or FAST_MODEL
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "600"))
+
+# Live web search for the financing search (https://tavily.com).
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "").strip()
+# Where the groups are; used to search for local financing.
+DEFAULT_COUNTRY = os.getenv("DEFAULT_COUNTRY", "Nigeria").strip() or "Nigeria"
 LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "60"))
 
 SESSION_SECRET = os.getenv("SESSION_SECRET", "")

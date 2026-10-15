@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&family=Unbounded:wght@500;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=40">
+<link rel="stylesheet" href="styles.css?v=41">
 </head>
 <body>
 <header class="band">
@@ -91,6 +91,7 @@
     <button data-tab="ask">Ask</button>
     <button data-tab="attention">Needs attention <span id="attnCount" class="badge">0</span></button>
     <button data-tab="bank" id="tabBank" class="hidden">Bank check</button>
+    <button data-tab="finance" id="tabFinance" class="hidden">Find financing</button>
     <button data-tab="ledger">Ledger</button>
     <button data-tab="members">Members</button>
     <button data-tab="activity">Activity</button>
@@ -142,6 +143,13 @@
       </div>
     </div>
     <div id="bankResult" aria-live="polite"></div>
+  </section>
+
+  <section data-panel="finance" class="hidden">
+    <p class="hint">Your group's verified history can open doors. TrustLedger searches the live web for loans, grants and programmes for
+      savings groups and cooperatives, then compares each one's requirements with your group's record. Only real sources are shown.</p>
+    <div class="actions"><button class="primary" id="btnFinance" type="button">Find financing options</button></div>
+    <div id="financeResult" aria-live="polite"></div>
   </section>
 
   <section data-panel="ledger" class="hidden">
@@ -381,6 +389,6 @@
   </form>
 </dialog>
 
-<script src="app.js?v=40"></script>
+<script src="app.js?v=41"></script>
 </body>
 </html>

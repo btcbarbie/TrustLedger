@@ -216,6 +216,9 @@ async function refresh() {
   $("#btnAddOb").classList.toggle("hidden", o.my_role !== "president");
   const leader = o.my_role !== "member";
   $("#tabBank").classList.toggle("hidden", !leader);
+  $("#tabFinance").classList.toggle("hidden", !leader);
+  if (!leader && state.tab === "finance") switchTab("overview");
+  if (leader && state.tab === "finance") renderFinance();
   if (!leader && state.tab === "bank") switchTab("overview");
   if (leader && state.tab === "bank") renderBank();
   renderFlow(); renderOverview(); renderAttention(); renderLedger(); renderMembers();
@@ -422,8 +425,39 @@ async function showRecord(id) {
     ${r.rows.map((x) => `<tr><td>${esc(x.title)}</td><td>${fmtDate(x.due_date)}</td><td class="num">${naira(x.due_kobo)}</td>
       <td class="num">${naira(x.paid_kobo)}${x.pending_kobo ? ` <small>(+${naira(x.pending_kobo)} waiting)</small>` : ""}</td>
       <td><span class="chip s-${cls[x.state]}">${label[x.state]}</span></td></tr>`).join("")}
-    </tbody></table></div></div>`;
+    </tbody></table></div>
+    ${r.member.id === state.me.user.id
+      ? `<div class="share-box"><h4>Share with a lender</h4>
+          <p class="meta">Create a private link to this record for a bank, microfinance officer or anyone you choose. AI writes a short
+          summary from the facts, and every number is checked against your ledger. The link works for ${30} days, and you can withdraw it at any time.</p>
+          <div class="actions"><button class="primary sm" type="button" id="btnShare">Create a share link</button></div>
+          <div id="shareOut"></div><div id="shareList"></div></div>`
+      : `<p class="meta share-note">Only ${esc(r.member.name.split(" ")[0])} can share this record with a lender.</p>`}
+    </div>`;
+  if (r.member.id === state.me.user.id) renderShares(id);
   $("#record").scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+}
+
+const shareUrl = (u) => location.origin + u;
+async function renderShares(memberId) {
+  const list = await api(`/api/groups/${state.groupId}/members/${memberId}/shares`);
+  const el = $("#shareList"); if (!el) return;
+  el.innerHTML = list.length ? `<div class="meta" style="margin-top:10px">Active links</div><ul class="share-links">${list.map((x) =>
+    `<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(shareUrl(x.url))}</a>
+      <span class="meta">until ${fmtDate(x.expires_at)}</span>
+      <button type="button" class="linkish" data-copyshare="${esc(x.url)}">Copy</button>
+      <button type="button" class="linkish" data-revoke="${esc(x.token)}" data-member="${memberId}">Withdraw</button></li>`).join("")}</ul>` : "";
+}
+async function createShare() {
+  const btn = $("#btnShare"), memberId = state.me.user.id;
+  btn.disabled = true; btn.textContent = "Writing the summary...";
+  try {
+    const r = await post(`/api/groups/${state.groupId}/members/${memberId}/share`, {});
+    $("#shareOut").innerHTML = `<div class="box ok"><b>Link ready.</b> <a href="${esc(r.url)}" target="_blank" rel="noopener">Open it</a> to see what the lender will see.
+      <p class="share-sum">${esc(r.summary)}</p><div class="meta">Written by ${esc(r.written_by)}</div></div>`;
+    await renderShares(memberId);
+  } catch (e) { $("#shareOut").innerHTML = `<div class="box err">${esc(e.message)}</div>`; }
+  finally { btn.disabled = false; btn.textContent = "Create a share link"; }
 }
 
 function pagerHtml(total, page, per, attr) {
@@ -461,6 +495,9 @@ async function renderActivity(keepPage) {
       payout_approved: () => `approved payout #${x.entry_id}`,
       payout_declined: () => `declined payout #${x.entry_id}${d.note ? ` - "${d.note}"` : ""}`,
       payout_receipt: () => `uploaded the receipt for payout #${x.entry_id} (${(d.status || "").replace("_", " ")})`,
+      record_shared: () => `shared their payment record with a lender (link valid until ${fmtDate(d.expires_at)})`,
+      record_share_revoked: () => `withdrew a shared payment record link`,
+      financing_searched: () => `searched the web for financing: ${d.options} option(s) from ${d.sources} sources`,
       statement_checked: () => `checked a bank statement: ${d.match} confirmed, ${(d.amount_differs || 0) + (d.not_in_ledger || 0) + (d.not_on_statement || 0) + (d.name_differs || 0)} to look into`,
       obligation_added: () => d.series ? `added ${d.series}: ${naira(d.amount_kobo)} x ${d.periods}` : `added the goal "${d.title}" (${naira(d.amount_kobo)} each)`,
     }[x.action]?.() || x.action;
@@ -822,6 +859,7 @@ function switchTab(tab) {
   $$("[data-panel]").forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== tab));
   if (tab === "activity") renderActivity();
   if (tab === "bank") renderBank();
+  if (tab === "finance") renderFinance();
   if (tab === "ask") { renderSuggestions(); $("#askForm").q.focus(); }
 }
 
@@ -884,9 +922,51 @@ async function checkStatement(sample) {
 $("#btnCheckStmt").addEventListener("click", () => checkStatement(false));
 $("#btnSampleStmt").addEventListener("click", () => checkStatement(true));
 
+// ---------- find financing ----------
+const FIT = { strong: ["Strong fit", "verified"], partial: ["Partial fit", "documented"], unclear: ["Not enough information", "reported"], weak: ["Weak fit", "needs_review"] };
+async function renderFinance(report) {
+  const out = $("#financeResult");
+  if (report === undefined) {
+    const gid = state.groupId;
+    try { report = await api(`/api/groups/${gid}/financing/latest`); } catch { report = null; }
+    if (gid !== state.groupId) return;
+  }
+  if (!report) { out.innerHTML = ""; return; }
+  const f = report.facts;
+  out.innerHTML = `<div class="card bank-report rise"><h3>Financing options for ${esc(f.group)}</h3>
+    <p class="meta">Searched ${new Date(report.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })} by ${esc(report.created_by)}.
+      Live web search by ${esc(report.searched_by)}${report.written_by ? `, compared with your record by ${esc(report.written_by)}` : ""}.
+      Only sources the search really returned are shown.</p>
+    <div class="fin-facts">${[[f.members, "members"], [f.months_active + " mo", "saving together"], [naira(f.total_in_kobo), "verified savings"],
+      [f.on_time_pct == null ? "-" : f.on_time_pct + "%", "paid on time"], [f.bank_confirmed_pct == null ? "not yet" : f.bank_confirmed_pct + "%", "confirmed by bank"]]
+      .map(([n, l]) => `<div><b>${esc(n)}</b><small>${l}</small></div>`).join("")}</div></div>
+  ${report.ai_error ? `<div class="box warn">The AI could not compare the results this time (${esc(report.ai_error)}). The sources the search found are listed below.</div>` : ""}
+  ${report.options.map((o, i) => `<article class="card fin-opt${rise(i)}">
+    <div class="bank-top"><a href="${esc(o.url)}" target="_blank" rel="noopener noreferrer"><b>${esc(o.name)}</b></a>
+      <span class="chip s-${(FIT[o.fit] || FIT.unclear)[1]}">${(FIT[o.fit] || FIT.unclear)[0]}</span></div>
+    <div class="meta">${esc(o.provider_type || "")}${o.provider_type ? " - " : ""}${esc(new URL(o.url).hostname)}</div>
+    <p>${esc(o.offers)}</p>
+    ${o.requirements?.length ? `<div class="meta">What they ask for</div><ul class="fin-req">${o.requirements.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
+    <div class="ai-note-box"><b>How your group compares</b><p>${esc(o.why)}</p>${o.next_step ? `<p><b>Next step:</b> ${esc(o.next_step)}</p>` : ""}</div>
+  </article>`).join("")}
+  <details class="card bank-ok"><summary><b>All ${report.sources.length} sources the search found</b></summary>
+    <ul>${report.sources.map((x) => `<li><a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.title)}</a></li>`).join("")}</ul></details>
+  <p class="hint">Always confirm terms directly with the lender. TrustLedger does not recommend or arrange loans.</p>`;
+}
+$("#btnFinance").addEventListener("click", async () => {
+  const btn = $("#btnFinance"); btn.disabled = true; btn.textContent = "Searching the web...";
+  $("#financeResult").innerHTML = `<div class="box grey">Searching the live web for lenders and programmes, then comparing their requirements with your group's record. This can take up to a minute.</div>`;
+  try { await renderFinance(await post(`/api/groups/${state.groupId}/financing`, {})); if (state.tab === "activity") renderActivity(); }
+  catch (e) { $("#financeResult").innerHTML = `<div class="box err">${esc(e.message)}</div>`; }
+  finally { btn.disabled = false; btn.textContent = "Find financing options"; }
+});
+
 let rejectId = null, rejectMode = "reject";
 document.addEventListener("click", async (ev) => {
   const t = ev.target.closest("button, [data-member], img[data-proof]") || ev.target;
+  if (t.id === "btnShare") return createShare();
+  if (t.dataset.copyshare) { const ok = await copyText(shareUrl(t.dataset.copyshare)); t.textContent = ok ? "Copied" : "Copy failed"; setTimeout(() => (t.textContent = "Copy"), 2000); return; }
+  if (t.dataset.revoke) { await post(`/api/shares/${t.dataset.revoke}/revoke`, {}); $("#shareOut").innerHTML = `<div class="box grey">Link withdrawn. It no longer opens.</div>`; return renderShares(+t.dataset.member); }
   if (t.dataset.tab) switchTab(t.dataset.tab);
   else if (t.dataset.goto) { switchTab(t.dataset.goto); $("#tabs").scrollIntoView({ behavior: reduced ? "auto" : "smooth" }); }
   else if (t.dataset.lpage) {

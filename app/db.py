@@ -87,6 +87,22 @@ CREATE TABLE IF NOT EXISTS statement_checks (
   file_sha256 TEXT NOT NULL,
   report TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS shares (
+  token TEXT PRIMARY KEY,
+  group_id INTEGER NOT NULL REFERENCES groups(id),
+  member_id INTEGER NOT NULL REFERENCES users(id),
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  revoked_at TEXT,
+  snapshot TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS financing_searches (
+  id INTEGER PRIMARY KEY,
+  group_id INTEGER NOT NULL REFERENCES groups(id),
+  created_by INTEGER NOT NULL REFERENCES users(id),
+  created_at TEXT NOT NULL,
+  report TEXT NOT NULL
+);
 """
 
 GENESIS = "0" * 64
