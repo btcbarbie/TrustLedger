@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&family=Unbounded:wght@500;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=39">
+<link rel="stylesheet" href="styles.css?v=40">
 </head>
 <body>
 <header class="band">
@@ -90,6 +90,7 @@
     <button data-tab="overview" class="active">Overview</button>
     <button data-tab="ask">Ask</button>
     <button data-tab="attention">Needs attention <span id="attnCount" class="badge">0</span></button>
+    <button data-tab="bank" id="tabBank" class="hidden">Bank check</button>
     <button data-tab="ledger">Ledger</button>
     <button data-tab="members">Members</button>
     <button data-tab="activity">Activity</button>
@@ -121,6 +122,26 @@
   <section data-panel="attention" class="hidden">
     <p class="hint">Every payment and payout needs a second person to confirm it before it counts. Nobody can confirm their own entry.</p>
     <div id="attention"></div>
+  </section>
+
+  <section data-panel="bank" class="hidden">
+    <p class="hint">Upload the statement of the group's bank or mobile-money account. AI reads every line, then fixed rules compare
+      it with the ledger: what the statement confirms, money nobody recorded, and recorded payments the bank never received.
+      Nothing in the ledger is changed. Leaders decide what to do.</p>
+    <div class="card bank-start">
+      <label class="drop" data-kind="statement">
+        <input name="statement_file" type="file" accept=".csv,.txt,text/csv,text/plain" class="sr-only">
+        <span class="drop-empty"><svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z M14 3v5h5 M9 12h7 M9 16h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          <b>Add a statement</b><small>CSV export from your bank app, or the lines copied into a .txt file. Up to 1 MB.</small></span>
+        <span class="drop-full"><img alt=""><span class="drop-meta"><b></b><small></small></span><button type="button" class="drop-x">Remove</button></span>
+      </label>
+      <div class="actions bank-actions">
+        <button class="primary" id="btnCheckStmt" type="button">Check statement</button>
+        <button class="secondary" id="btnSampleStmt" type="button">Try a sample statement</button>
+        <a class="linkish indigo" id="lnkSampleStmt" download="sample-statement.csv">Download the sample</a>
+      </div>
+    </div>
+    <div id="bankResult" aria-live="polite"></div>
   </section>
 
   <section data-panel="ledger" class="hidden">
@@ -360,6 +381,6 @@
   </form>
 </dialog>
 
-<script src="app.js?v=39"></script>
+<script src="app.js?v=40"></script>
 </body>
 </html>

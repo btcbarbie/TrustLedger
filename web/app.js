@@ -214,6 +214,10 @@ async function refresh() {
   $("#btnOut").classList.toggle("hidden", o.my_role !== "treasurer");
   $("#btnOut2").classList.toggle("hidden", o.my_role !== "treasurer");
   $("#btnAddOb").classList.toggle("hidden", o.my_role !== "president");
+  const leader = o.my_role !== "member";
+  $("#tabBank").classList.toggle("hidden", !leader);
+  if (!leader && state.tab === "bank") switchTab("overview");
+  if (leader && state.tab === "bank") renderBank();
   renderFlow(); renderOverview(); renderAttention(); renderLedger(); renderMembers();
   if (state.tab === "activity") renderActivity();
 }
@@ -457,6 +461,7 @@ async function renderActivity(keepPage) {
       payout_approved: () => `approved payout #${x.entry_id}`,
       payout_declined: () => `declined payout #${x.entry_id}${d.note ? ` - "${d.note}"` : ""}`,
       payout_receipt: () => `uploaded the receipt for payout #${x.entry_id} (${(d.status || "").replace("_", " ")})`,
+      statement_checked: () => `checked a bank statement: ${d.match} confirmed, ${(d.amount_differs || 0) + (d.not_in_ledger || 0) + (d.not_on_statement || 0) + (d.name_differs || 0)} to look into`,
       obligation_added: () => d.series ? `added ${d.series}: ${naira(d.amount_kobo)} x ${d.periods}` : `added the goal "${d.title}" (${naira(d.amount_kobo)} each)`,
     }[x.action]?.() || x.action;
     return `<li style="--i:${i}" class="rise"><b>${esc(x.actor)}</b> ${esc(what)} <span class="meta">- ${new Date(x.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}</span><br><code>seal ${esc(x.hash)}</code></li>`;
@@ -660,8 +665,10 @@ function setupDrop(label) {
     if (url) { URL.revokeObjectURL(url); url = null; }
     err.hidden = true;
     if (!f) { label.classList.remove("has-file"); return; }
-    const chat = label.dataset.kind === "chat";
-    const bad = chat
+    const chat = label.dataset.kind === "chat" || label.dataset.kind === "statement";
+    const bad = label.dataset.kind === "statement"
+      ? (!/\.(csv|txt)$/i.test(f.name) ? "Choose a .csv or .txt statement file." : f.size > 1024 * 1024 ? "That statement is larger than 1 MB." : "")
+      : chat
       ? (!/\.txt$/i.test(f.name) ? "Choose the .txt file that WhatsApp exported." : f.size > 1024 * 1024 ? "That chat export is larger than 1 MB." : "")
       : !["image/png", "image/jpeg", "image/webp"].includes(f.type) ? "Choose a PNG, JPG or WEBP image."
       : f.size > 5 * 1024 * 1024 ? "That image is larger than 5 MB. Choose a smaller one." : "";
@@ -814,8 +821,68 @@ function switchTab(tab) {
   $$("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   $$("[data-panel]").forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== tab));
   if (tab === "activity") renderActivity();
+  if (tab === "bank") renderBank();
   if (tab === "ask") { renderSuggestions(); $("#askForm").q.focus(); }
 }
+
+// ---------- bank check ----------
+const BANK = {
+  amount_differs: ["Amount differs", "rejected"],
+  not_in_ledger: ["Not recorded", "needs_review"],
+  not_on_statement: ["Not on the statement", "needs_review"],
+  name_differs: ["Name differs", "documented"],
+  match: ["Confirmed", "verified"],
+};
+async function renderBank(report) {
+  $("#lnkSampleStmt").href = `/api/groups/${state.groupId}/statement/sample`;
+  const out = $("#bankResult");
+  if (report === undefined) {
+    const gid = state.groupId;
+    try { report = await api(`/api/groups/${gid}/statement/latest`); } catch { report = null; }
+    if (gid !== state.groupId) return;
+  }
+  if (!report) { out.innerHTML = ""; return; }
+  const c = report.counts, problems = report.items.filter((i) => i.kind !== "match"), ok = report.items.filter((i) => i.kind === "match");
+  const line = (t) => t ? `<code class="stmt-line">Line ${t.line}: ${esc(t.text)}</code>` : "";
+  const note = (n) => n ? `<div class="ai-note-box"><b>Likely explanation</b>${n.likely_member ? ` <span class="meta">- probably ${esc(n.likely_member)}</span>` : ""}<p>${esc(n.explanation)}</p></div>` : "";
+  out.innerHTML = `<div class="card bank-report rise">
+    <h3>Statement check${report.period ? `: ${fmtDate(report.period[0])} to ${fmtDate(report.period[1])}` : ""}</h3>
+    <p class="meta">${esc(report.source)} - ${report.transactions} transactions - checked by ${esc(report.checked_by)}, ${new Date(report.checked_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}</p>
+    <div class="counts">${Object.keys(BANK).map((k, i) => `<span class="chip s-${BANK[k][1]} rise" style="--i:${i}">${BANK[k][0]}: ${c[k] || 0}</span>`).join("")}</div>
+    <p class="meta">Read by ${esc(report.read_by)}${report.explained_by ? ` - explained by ${esc(report.explained_by)}` : ""}. Every match and amount is checked by fixed rules, not the AI.</p>
+    ${report.dropped?.length ? `<details class="meta"><summary>${report.dropped.length} line(s) ignored</summary><ul>${report.dropped.map((d) => `<li>${esc(d)}</li>`).join("")}</ul></details>` : ""}
+  </div>
+  ${problems.length ? `<h2 class="sec">To look into (${problems.length})</h2>` : `<div class="box ok">Everything on the statement matches the ledger.</div>`}
+  ${problems.map((it, i) => `<article class="card bank-item k-${it.kind}${rise(i)}">
+    <div class="bank-top"><span class="chip s-${BANK[it.kind][1]}">${BANK[it.kind][0]}</span>
+      <b class="att-amt ${(it.txn || it.entry).direction}">${naira((it.txn || it.entry).amount_kobo)}</b></div>
+    <p>${esc(it.reason)}</p>${line(it.txn)}${note(it.note)}
+    ${it.entry ? `<div class="meta">Ledger entry #${it.entry.id} - ${STATUS[it.entry.status] || esc(it.entry.status)}</div>` : ""}
+  </article>`).join("")}
+  ${ok.length ? `<details class="card bank-ok"><summary><b>${ok.length} ledger entries confirmed by the statement</b></summary>
+    <ul>${ok.map((it) => `<li>${esc(it.entry.description)} <span class="meta">- line ${it.txn.line}</span></li>`).join("")}</ul></details>` : ""}`;
+}
+async function checkStatement(sample) {
+  const file = $("[name=statement_file]").files[0];
+  if (!sample && !file) { $("#bankResult").innerHTML = `<div class="box warn">Choose a statement file first, or try the sample statement.</div>`; return; }
+  const fd = new FormData();
+  if (sample) fd.append("sample", "true"); else fd.append("statement_file", file);
+  const btns = [$("#btnCheckStmt"), $("#btnSampleStmt")], label = btns.map((b) => b.textContent);
+  btns.forEach((b) => (b.disabled = true));
+  (sample ? btns[1] : btns[0]).textContent = "Reading the statement...";
+  $("#bankResult").innerHTML = `<div class="box grey">The AI is reading every line, then the rules compare it with the ledger. This can take up to a minute.</div>`;
+  try {
+    const report = await api(`/api/groups/${state.groupId}/statement/check`, { method: "POST", body: fd });
+    await renderBank(report);
+    if (state.tab === "activity") renderActivity();
+  } catch (err) {
+    $("#bankResult").innerHTML = `<div class="box err">${esc(err.message)}</div>`;
+  } finally {
+    btns.forEach((b, i) => { b.disabled = false; b.textContent = label[i]; });
+  }
+}
+$("#btnCheckStmt").addEventListener("click", () => checkStatement(false));
+$("#btnSampleStmt").addEventListener("click", () => checkStatement(true));
 
 let rejectId = null, rejectMode = "reject";
 document.addEventListener("click", async (ev) => {

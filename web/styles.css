@@ -579,3 +579,20 @@ dialog.wide{width:min(600px,94vw)}
 @keyframes sheet{from{transform:translateY(100%)}}
 .tabs{scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* bank check */
+.bank-start{margin-bottom:18px}.bank-start:hover{transform:none;box-shadow:none}
+.bank-actions{margin:14px 0 0}
+.drop[data-kind="statement"] .drop-full img{display:none}
+.drop[data-kind="statement"] .drop-full::before{content:"";flex:none;width:44px;height:44px;border-radius:12px;background:var(--sky-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24'%3E%3Cpath d='M6 3h9l4 4v14H6z M14 3v5h5 M9 12h7 M9 16h7' fill='none' stroke='%232B3F94' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center}
+.bank-report{margin-bottom:18px}.bank-report:hover,.bank-item:hover,.bank-ok:hover{transform:none;box-shadow:none}
+.bank-report h3{font:700 18px var(--display);margin:0 0 4px;color:var(--night)}
+.bank-item{margin-bottom:12px;border-left:4px solid var(--amber)}
+.bank-item.k-amount_differs{border-left-color:var(--kola)}.bank-item.k-name_differs{border-left-color:var(--sky)}
+.bank-item p{margin:8px 0}
+.bank-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.stmt-line{display:block;font:12px var(--mono);background:var(--grey-bg);border-radius:8px;padding:6px 10px;margin:6px 0;overflow-wrap:anywhere;color:var(--night)}
+.ai-note-box{background:var(--sky-bg);border-radius:10px;padding:10px 12px;margin:8px 0;font-size:14px}
+.ai-note-box p{margin:4px 0 0}
+.bank-ok summary{cursor:pointer}.bank-ok ul{margin:10px 0 0;padding-left:18px;font-size:14px;line-height:1.6}
+#bankResult>.box{padding:12px 14px;border-radius:12px;margin-bottom:14px}
