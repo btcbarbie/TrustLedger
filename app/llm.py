@@ -42,7 +42,7 @@ def _first_json(text: str) -> dict:
 
 
 def complete_json(prompt: str, image_bytes: bytes | None = None, mime: str = "image/png",
-                  model: str | None = None) -> dict:
+                  model: str | None = None, max_tokens: int | None = None) -> dict:
     """Returns {"data": <parsed JSON>, "provider": label, "model": id, "ms": latency}.
     `model` picks the model for this job on the primary provider (see config.*_MODEL).
     Raises LLMError if every provider fails."""
@@ -60,7 +60,7 @@ def complete_json(prompt: str, image_bytes: bytes | None = None, mime: str = "im
                     model=p["model"],
                     messages=_messages(prompt, image_bytes, mime, p["image_mode"]),
                     temperature=0,
-                    max_tokens=config.LLM_MAX_TOKENS,
+                    max_tokens=max(max_tokens or 0, config.LLM_MAX_TOKENS),
                 )
                 data = _first_json(resp.choices[0].message.content or "")
                 return {"data": data, "provider": p["label"], "model": p["model"],

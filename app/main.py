@@ -14,11 +14,13 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from . import ask, config, db, proof, rules
 from .deps import membership, viewer
+from .checks_api import router as checks_router
 from .groups_api import router as groups_router
 from .money import format_naira, parse_naira
 
 app = FastAPI(title="TrustLedger")
 app.include_router(groups_router)
+app.include_router(checks_router)
 app.add_middleware(SessionMiddleware, secret_key=config.SESSION_SECRET, same_site="lax",
                    https_only=config.SECURE_COOKIES, max_age=60 * 60 * 12)
 

@@ -79,6 +79,14 @@ CREATE TABLE IF NOT EXISTS ledger_events (
   hash TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_events_group ON ledger_events(group_id, id);
+CREATE TABLE IF NOT EXISTS statement_checks (
+  id INTEGER PRIMARY KEY,
+  group_id INTEGER NOT NULL REFERENCES groups(id),
+  created_by INTEGER NOT NULL REFERENCES users(id),
+  created_at TEXT NOT NULL,
+  file_sha256 TEXT NOT NULL,
+  report TEXT NOT NULL
+);
 """
 
 GENESIS = "0" * 64

@@ -13,7 +13,8 @@ APPROVER_ROLES = {"president", "treasurer"}
 
 _ORD = re.compile(r"(\d{1,2})(st|nd|rd|th)\b", re.IGNORECASE)
 _DATE_FORMATS = ["%d %b %Y", "%d %B %Y", "%b %d %Y", "%B %d %Y", "%d/%m/%Y", "%d-%m-%Y",
-                 "%Y-%m-%d", "%d.%m.%Y", "%d %b, %Y", "%b %d, %Y", "%B %d, %Y", "%d/%m/%y"]
+                 "%Y-%m-%d", "%d.%m.%Y", "%d %b, %Y", "%b %d, %Y", "%B %d, %Y", "%d/%m/%y",
+                 "%d-%b-%Y", "%d-%b-%y", "%d %b %y"]
 
 
 def parse_date_text(text: str | None) -> date | None:
