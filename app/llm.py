@@ -1,4 +1,4 @@
-"""One OpenAI-compatible client for every provider (NVIDIA Brev via vLLM, NVIDIA Build, ...).
+"""One OpenAI-compatible client for every provider (Nebius Token Factory, NVIDIA Build, ...).
 Switching provider is a config change. If the primary fails, the fallback is tried."""
 import base64
 import json
@@ -32,6 +32,8 @@ def _messages(prompt: str, image_bytes: bytes | None, mime: str, mode: str) -> l
 
 
 def _first_json(text: str) -> dict:
+    # Reasoning models (e.g. Nemotron) may think out loud first; only the answer after it counts.
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
     text = re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.MULTILINE).strip()
     start, end = text.find("{"), text.rfind("}")
     if start < 0 or end <= start:
@@ -40,14 +42,14 @@ def _first_json(text: str) -> dict:
 
 
 def complete_json(prompt: str, image_bytes: bytes | None = None, mime: str = "image/png",
-                  text_model: str | None = None) -> dict:
+                  model: str | None = None) -> dict:
     """Returns {"data": <parsed JSON>, "provider": label, "model": id, "ms": latency}.
-    `text_model` tries a larger text-only model on the primary provider first.
+    `model` picks the model for this job on the primary provider (see config.*_MODEL).
     Raises LLMError if every provider fails."""
     errors = []
     chain = [config.PRIMARY, config.FALLBACK]
-    if text_model and image_bytes is None:
-        chain = [{**config.PRIMARY, "model": text_model}] + chain
+    if model and model != config.PRIMARY["model"]:
+        chain = [{**config.PRIMARY, "model": model}] + chain
     for p in chain:
         if not p:
             continue
@@ -58,7 +60,7 @@ def complete_json(prompt: str, image_bytes: bytes | None = None, mime: str = "im
                     model=p["model"],
                     messages=_messages(prompt, image_bytes, mime, p["image_mode"]),
                     temperature=0,
-                    max_tokens=600,
+                    max_tokens=config.LLM_MAX_TOKENS,
                 )
                 data = _first_json(resp.choices[0].message.content or "")
                 return {"data": data, "provider": p["label"], "model": p["model"],

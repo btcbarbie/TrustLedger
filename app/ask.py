@@ -128,7 +128,7 @@ def interpret(question: str, today: date | None = None, members: list[str] | Non
         context += "CONTRIBUTIONS: " + "; ".join(obligations[:80]) + "\n"
     try:
         out = llm.complete_json(context + PROMPT.replace("{today}", today.isoformat()) + question[:500],
-                                text_model=config.TEXT_MODEL or None)
+                                model=config.FAST_MODEL)
         q = Query.model_validate(out["data"])
         if q.intent == "unknown" and _month_in(" " + question.lower() + " ", today):
             q = Query(intent="period_summary", month=_month_in(" " + question.lower() + " ", today))

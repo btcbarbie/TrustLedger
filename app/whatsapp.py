@@ -6,7 +6,7 @@ from datetime import date
 from pydantic import BaseModel, ValidationError
 from rapidfuzz import fuzz
 
-from . import llm
+from . import config, llm
 from .money import parse_naira
 
 # Android: "27/09/2026, 14:03 - Name: text"   iOS: "[27/09/2026, 14:03:22] Name: text"
@@ -123,7 +123,7 @@ def extract_claims(msgs: list[Message]) -> dict:
         for i in range(0, len(usable), 60):
             batch = usable[i:i + 60]
             body = "\n".join(f"[{m.id}] {m.day:%d/%m/%Y} {m.sender}: {m.text}" for m in batch)
-            out = llm.complete_json(PROMPT + body)
+            out = llm.complete_json(PROMPT + body, model=config.FAST_MODEL)
             claims += Claims.model_validate(out["data"]).payments
             provider, total_ms = f"{out['provider']} ({out['model']})", total_ms + out["ms"]
     except (llm.LLMError, ValidationError) as e:

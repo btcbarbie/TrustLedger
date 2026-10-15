@@ -127,7 +127,7 @@ def group_overview(group_id: int, user=Depends(viewer)):
     group.pop("invite_code", None)
     return {"group": group, "my_role": me_role, "members": members, "obligations": obligations,
             "totals": totals, "today": date.today().isoformat(),
-            "ai": {"primary": config.PRIMARY["label"], "model": config.PRIMARY["model"],
+            "ai": {"primary": config.PRIMARY["label"], "model": config.VISION_MODEL,
                    "fallback": config.FALLBACK["label"] if config.FALLBACK else None}}
 
 

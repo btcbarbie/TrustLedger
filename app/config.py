@@ -26,15 +26,19 @@ def _provider(prefix: str, label_key: str, mode_key: str) -> dict | None:
 
 
 PRIMARY = _provider("LLM_", "LLM_PROVIDER_LABEL", "LLM_IMAGE_MODE") or {
-    "base_url": "https://integrate.api.nvidia.com/v1",
-    "api_key": "",
-    "model": "meta/llama-3.2-11b-vision-instruct",
-    "label": "NVIDIA Build",
+    "base_url": "https://api.tokenfactory.nebius.com/v1/",
+    "api_key": os.getenv("NEBIUS_API_KEY", ""),
+    "model": "nvidia/nemotron-3-super-120b-a12b",
+    "label": "Nebius Token Factory",
     "image_mode": "openai",
 }
 FALLBACK = _provider("LLM_FALLBACK_", "LLM_FALLBACK_LABEL", "LLM_FALLBACK_IMAGE_MODE")
-# Optional larger text-only model (same provider) for understanding questions in Ask.
-TEXT_MODEL = os.getenv("LLM_TEXT_MODEL", "").strip()
+# One model per job, all on the primary provider. Each falls back to LLM_MODEL when unset.
+# Vision reads receipts; fast handles chat import and Ask; reasoning does the heavy cross-checking.
+VISION_MODEL = os.getenv("LLM_VISION_MODEL", "").strip() or PRIMARY["model"]
+FAST_MODEL = (os.getenv("LLM_FAST_MODEL", "") or os.getenv("LLM_TEXT_MODEL", "")).strip() or PRIMARY["model"]
+REASONING_MODEL = os.getenv("LLM_REASONING_MODEL", "").strip() or FAST_MODEL
+LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "600"))
 LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "60"))
 
 SESSION_SECRET = os.getenv("SESSION_SECRET", "")
